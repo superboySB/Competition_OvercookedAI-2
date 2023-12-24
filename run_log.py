@@ -118,9 +118,11 @@ def run_game(g, env_name, multi_part_agent_ids, actions_spaces, policy_list, ren
                  "mode": "terminal",
                  "seed": g.seed if hasattr(g, "seed") else None,
                  "map_size": g.map_size if hasattr(g, "map_size") else None}
+    print(game_info)
 
     steps = []
     all_observes = g.all_observes
+    scores = 0
     while not g.is_terminal():
         step = "step%d" % g.step_cnt
         if g.step_cnt % 10 == 0:
@@ -129,12 +131,12 @@ def run_game(g, env_name, multi_part_agent_ids, actions_spaces, policy_list, ren
         if render_mode and hasattr(g, "env_core"):
             if hasattr(g.env_core, "render"):
                 g.env_core.render()
-        elif render_mode and hasattr(g, 'render'):
+        elif render_mode and hasattr(g, 'render'):  # True
             g.render()
 
         info_dict = {"time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}
         joint_act = get_joint_action_eval(g, multi_part_agent_ids, policy_list, actions_spaces, all_observes)
-        all_observes, reward, done, info_before, info_after = g.step(joint_act)
+        all_observes, reward, _, info_before, info_after = g.step(joint_act)
 
 
         if env_name.split("-")[0] in ["magent"]:
@@ -145,7 +147,10 @@ def run_game(g, env_name, multi_part_agent_ids, actions_spaces, policy_list, ren
         if info_after:
             info_dict["info_after"] = info_after
         steps.append(info_dict)
-
+        scores += reward
+        
+    print(f"score: {scores}")
+    
     game_info["steps"] = steps
     game_info["winner"] = g.check_win()
     game_info["winner_information"] = g.won

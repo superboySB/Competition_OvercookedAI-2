@@ -194,9 +194,19 @@ class OvercookedAI_Integrated(Game, DictObservation):
         joint_action_decode = self.decode(joint_action)
         info_before = self.step_before_info(joint_action_decode)
         next_state, reward, map_done, info_after = self.env.step(joint_action_decode)
+        # 【info_after】
+        # 'agent_infos':
+        # [{}, {}]
+        # 'sparse_r_by_agent':
+        # [0, 0]
+        # 'shaped_r_by_agent':
+        # [0, 0]
+        # 'phi_s':
+        # None
+        # 'phi_s_prime':
+        # None
 
         #TODO: to include value of ingradient
-
         if map_done and not self.last_game:
             self.reset_map()
             self.env.display_states(self.env.state)
