@@ -7,35 +7,15 @@ This repo provide the source code of a solution for the [RLChina Competition - G
 
 ## 我们方案的安装教程
 ```sh
-docker pull nvcr.io/nvidia/pytorch:23.04-py3
-docker run -itd --privileged -v /tmp/.X11-unix:/tmp/.X11-unix:ro -e DISPLAY=$DISPLAY --gpus all --network=host --name=zsc nvcr.io/nvidia/pytorch:23.04-py3 /bin/bash
+docker build -t zsc_image:1.0 .
 
-apt-get install -y git libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+docker run -itd --privileged -v /tmp/.X11-unix:/tmp/.X11-unix:ro -e DISPLAY=$DISPLAY --gpus all --network=host --name=zsc zsc_image:1.0 /bin/bash
 
-mkdir miniconda3 && wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh && bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 && rm miniconda3/miniconda.sh && miniconda3/bin/conda init bash
+conda create -n madrona python=3.10 && conda activate madrona 
 
+cd /workspace && git clone https://github.com/superboySB/Competition_OvercookedAI-2 && cd Competition_OvercookedAI-2 && git submodule update --init --recursive && mkdir build && cd build && cmake -D CUDAToolkit_ROOT=/usr/local/cuda .. && make -j8
 
-
-miniconda3/bin/conda create -n madrona python=3.10 && conda activate madrona && pip install torch numpy tensorboard packaging
-
-
-cd /workspace
-git clone https://github.com/bsarkar321/madrona_rl_envs
-cd madrona_rl_envs
-git submodule update --init --recursive
-mkdir build && cd build && cmake -D CUDAToolkit_ROOT=/usr/local/cuda .. && make -j8 && cd ..
-
-pip install -e .
-
-pip install -e overcooked_ai
-
-# -------------------
-
-conda create -n zsc python=3.8
-conda activate zsc 
-pip install torch torchvision wandb icecream setproctitle gym seaborn tensorboardX slackweb psutil slackweb pyastar2d einops absl-py
-pip install -r requirements.txt
-pip install -e.
+cd .. && pip install -e . && pip install -e overcooked_ai
 ```
 
 ### Overcooked
