@@ -5,7 +5,9 @@
 This repo provide the source code of a solution for the [RLChina Competition - Gui Mao Winter Season](http://www.jidiai.cn/compete_detail?compete=44), by BIT-LINC.
 
 
-## 我们方案的安装教程
+## Our Solution
+
+### 安装教程
 ```sh
 docker build -t zsc_image:1.0 .
 
@@ -20,56 +22,14 @@ mkdir build && cd build && cmake -D CUDAToolkit_ROOT=/usr/local/cuda .. && make 
 cd .. && pip install -e . && pip install -e overcooked_ai
 ```
 
-### Overcooked
-Our experiments are conducted in three layouts from [On the Utility of Learning about Humans for Human-AI Coordination](https://github.com/HumanCompatibleAI/human_aware_rl/tree/neurips2019), named *Asymmetric Advantages*, *Coordination Ring*, and *Counter Circuit*,  and two designed layouts, named *Distant Tomato* and *Many Orders*. These layouts are named "unident_s", "random1", "random3", "distant_tomato" and "many_orders" respectively in the code.
+### 目前计划 1225
+1. 尝试根据比赛的obs，并且仔细看一下我现在solution训练的obs，去找到对应关系，使得我的模型可以apply，原理上可以参考这个博客，哈哈哈，我还是用类似GPU仿真这样的玩具，发现效果还不错
+2. 尝试看能不能submission里面放三个pt（现在已经训出来了，每一个都是1千万步，你可以尝试在实验室机器配环境训练，差不多1块卡训1000万步只需要5分钟），看看官方是不是会有限制，但目前确实三个模型如果都是CNN的话，地图大小不一样，那模型的维度也都不一样。。。如果限制只能交一个pt，那可能会有distillation的需求
+3. 看看目前训练脚本的超参数是不是还能对照overcooked比较合理的论文，进一步调一调。由于训练非常快（分钟级），所以直接log都打印在本地了，训完直接就测，所以没有接wandb和tensorboard，必要的时候也可以尝试接一下
 
-Note:
-- many_orders类似图1：狭窄房间（cramped_room_tomato）
-- unident_s类似图2：强制协调（forced_coordination_tomato）
-- unident_s类似图3：汤类合作（soup_coordination）
-### Training
+还有不到1个月开始正赛，我觉得接下来这三件事情搞完应该能有一个还可以的成绩，也脱离了前沿顶会，追求了工程的极致。第一步应该是最难的地方，我昨天接通了这个训练后，也一直在看，这个要结合[作者的博客](https://bsarkar321.github.io/blog/overcooked_madrona/index.html)（这个作者是斯坦福做ZSC的那个组的学生，其实我们也算是紧跟前沿），以及实际的C++代码、Python代码，去和比赛定义的环境作对比
 
-All training scripts are under directory `hsp/scripts`. All methods consist of two stages, in the first of which a pool of policies are trained and in the second of which an adaptive policy is trained against this policy pool. 
-
-### Self-Play
-
-To train self-play policies, change `layout` to one of "unident_s"(Asymmetric Advantages), "random1"(Coordination Ring), "random3"(Counter Circuit), "distant_tomato"(Distant_Tomato) and "many_orders"(Many Orders) and run `./train_overcooked_sp.sh`.
-
-### FCP
-
-In the first stage, run `./train_sp_all_S1.sh` to train 12 polcicies via self-play on each layout. After the first stage training is done, run `python extract_sp_S1_models.py` to extract init, middle and final checkpoints of the self-play policies into the policy pool. At this step, the policy pools of FCP on all layouts should be in the directory `hsp/policy_pool/LAYOUT/fcp/s1`. 
-
-In the second stage, run `./train_fcp_all_S2.sh` to train an adaptive policy against the policy pool for each layout.
-
-### MEP
-We reimplemented [Maximum Entropy Population-Based Training for Zero-Shot Human-AI Coordination](https://github.com/ruizhaogit/maximum_entropy_population_based_training) and achieved significant higher episode reward when paired with human proxy models than reported in original paper. 
-
-For the first stage, run `./train_mep_all_S1.sh`. After training is finished, run `python extract_mep_S1_models.py` to extract checkpoints of the MEP policies into the policy pool. 
-
-For the second stage, run `./train_mep_all_S2.sh`.
-
-### HSP
-**Important:** Please make sure you finished the first stage training of MEP before the second stage of HSP.
-
-For the first stage, run `./train_hsp_all_S1.sh`. After training is finished, run `python extract_hsp_S1_models.py` to collect HSP policies into the policy pool. 
-
-Then run `./eval_events_all.sh` to do evaluation to obtain event features for each pair of biased policy and adaptive policy in HSP.  After evaluation is done, for each layout, run `python hsp/greedy_select.py --layout LAYOUT --k 18` to select HSP policies in a greedy manner and generate configuration of policy pool automatically.
-
-For the second stage, run `./train_hsp_all_S2.sh`.
-
-### Evaluation
-
-Run `./eval_overcooked.sh` for evaluation. You can change the layout name, path to YAML file of population configuration and policies to evaluate in `eval_overcooked.sh`. To evaluate with script policies, change policy name to a string with `script:` as prefix, for example, `script:place_onion_and_deliver_soup`. For more script policies, check `script_agent.py` under the overcooked environment directories.
-
-## Multi-Agent Game Evaluation Platform --- Jidi (及第)
-Jidi supports online evaluation service for various games/simulators/environments/testbeds. Website: [www.jidiai.cn](www.jidiai.cn).
-
-A tutorial on Jidi: [Tutorial](https://github.com/jidiai/ai_lib/blob/master/assets/Jidi%20tutorial.pdf)
-
-
-## Environment
-The competition uses an integrated version of [OvercookedAI games](https://github.com/HumanCompatibleAI/overcooked_ai)
-
+## 比赛官方介绍
 
 ### OvercookedAI-Integrated II
 <img src='https://jidi-images.oss-cn-beijing.aliyuncs.com/jidi/env103.gif' width=400>
