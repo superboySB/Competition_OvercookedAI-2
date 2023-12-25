@@ -8,7 +8,7 @@
 
 using IntVector = std::vector<int64_t>;
 
-namespace Overcooked {
+namespace Simplecooked {
 
   class Manager {
   public:

@@ -1,5 +1,4 @@
 import gym
-import os
 import torch
 import numpy as np
 
@@ -7,21 +6,18 @@ from .multiagentenv import MultiAgentEnv
 from .vectorenv import VectorMultiAgentEnv
 from .vectorobservation import VectorObservation
 
-from overcooked_ai_py.utils import load_dict_from_file
+from overcooked_ai_py.utils import read_layout_dict, load_dict_from_file
+
 from overcooked_ai_py.mdp.actions import Action
 from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld
 from overcooked_ai_py.mdp.overcooked_env import OvercookedEnv
 
-import build.madrona_simplecooked_example_python as overcooked_python
+import build.madrona_overcooked_example_python as overcooked_python
 
-LAYOUTS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-def read_layout_dict(layout_name):
-    return load_dict_from_file(os.path.join(LAYOUTS_DIR, "env/layouts", layout_name + ".layout"))
 
 class OvercookedMadrona(VectorMultiAgentEnv):
 
-    def __init__(self, layout_name, num_envs, gpu_id, debug_compile=True, use_cpu=False, use_env_cpu=False, ego_agent_idx=0, horizon=200, num_players=None):
+    def __init__(self, layout_name, num_envs, gpu_id, debug_compile=True, use_cpu=False, use_env_cpu=False, ego_agent_idx=0, horizon=400, num_players=None):
         self.layout_name = layout_name
         self.base_layout_params = get_base_layout_params(layout_name, horizon, max_num_players=num_players)
         self.width = self.base_layout_params['width']
@@ -31,7 +27,7 @@ class OvercookedMadrona(VectorMultiAgentEnv):
 
         self.horizon = horizon
 
-        sim = overcooked_python.SimplecookedSimulator(
+        sim = overcooked_python.OvercookedSimulator(
             exec_mode = overcooked_python.madrona.ExecMode.CPU if use_cpu else overcooked_python.madrona.ExecMode.CUDA,
             gpu_id = gpu_id,
             num_worlds = num_envs,
@@ -41,7 +37,7 @@ class OvercookedMadrona(VectorMultiAgentEnv):
 
         sim_device = torch.device('cpu') if use_cpu or not torch.cuda.is_available() else torch.device('cuda')
         
-        full_obs_size = self.width * self.height * (5 * self.num_players + 10)
+        full_obs_size = self.width * self.height * (5 * self.num_players + 16)
 
         self.sim = sim
 
@@ -55,9 +51,7 @@ class OvercookedMadrona(VectorMultiAgentEnv):
         self.static_agentID = self.sim.agent_id_tensor().to_torch().to(torch.long)
         self.static_locationWorldID = self.sim.location_world_id_tensor().to_torch().to(torch.long)
         self.static_locationID = self.sim.location_id_tensor().to_torch().to(torch.long)
-
-        self.static_action_mask = torch.ones((num_envs, len(Action.ALL_ACTIONS))).to(device=sim_device, dtype=torch.bool)
-
+        
         self.obs_size = full_obs_size
         self.state_size = full_obs_size
         
@@ -75,8 +69,8 @@ class OvercookedMadrona(VectorMultiAgentEnv):
 
         super().__init__(num_envs, device=env_device, n_players=self.num_players)
 
-        self.static_scattered_observations = torch.empty((self.height * self.width * self.num_players, self.num_envs, 5 * self.num_players + 10), dtype=torch.int8, device=sim_device)
-        self.static_scattered_observations[self.static_locationID, self.static_locationWorldID, :] = self.static_observations[:, :, :5 * self.num_players + 10]
+        self.static_scattered_observations = torch.empty((self.height * self.width * self.num_players, self.num_envs, 5 * self.num_players + 16), dtype=torch.int8, device=sim_device)
+        self.static_scattered_observations[self.static_locationID, self.static_locationWorldID, :] = self.static_observations[:, :, :5 * self.num_players + 16]
 
         self.infos = [{}] * self.num_envs
         
@@ -84,12 +78,12 @@ class OvercookedMadrona(VectorMultiAgentEnv):
 
         self.observation_space = self._setup_observation_space()
         self.share_observation_space = self.observation_space
-        self.action_space = gym.spaces.Discrete(len(Action.ALL_ACTIONS))
+        self.action_space = gym.spaces.Discrete(Action.NUM_ACTIONS)
 
         self.n_reset()
 
     def _setup_observation_space(self):
-        obs_shape = np.array([self.width, self.height, 5 * self.num_players + 10])
+        obs_shape = np.array([self.width, self.height, 5 * self.num_players + 16])
         return gym.spaces.MultiBinary(obs_shape)
 
     def to_torch(self, a):
@@ -97,13 +91,12 @@ class OvercookedMadrona(VectorMultiAgentEnv):
 
     def get_obs(self):
         # self.static_scattered_active_agents[self.static_agentID, self.static_worldID] = self.static_active_agents
-        self.static_scattered_observations[self.static_locationID, self.static_locationWorldID, :] = self.static_observations[:, :, :5 * self.num_players + 10]
+        self.static_scattered_observations[self.static_locationID, self.static_locationWorldID, :] = self.static_observations[:, :, :5 * self.num_players + 16]
 
         obs0 = self.to_torch(self.static_scattered_observations[:, :, :]).reshape((self.num_players, self.height, self.width, self.num_envs, -1)).transpose(1, 3)
 
         obs = [VectorObservation(self.to_torch(self.static_scattered_active_agents[i].to(torch.bool)),
-                                 obs0[i],
-                                 action_mask=self.static_action_mask)
+                                 obs0[i])
                for i in range(self.n_players)]
 
         return obs
@@ -126,11 +119,113 @@ class OvercookedMadrona(VectorMultiAgentEnv):
         pass
 
 
+class OvercookedTaichi(VectorMultiAgentEnv):
+
+    def __init__(self, layout_name, num_envs, use_env_cpu=False, ego_agent_idx=0, horizon=400, num_players=None):
+        from .overcooked_taichi import TaichiSimulator
+
+        self.layout_name = layout_name
+        self.base_layout_params = get_base_layout_params(layout_name, horizon, max_num_players=num_players)
+        self.width = self.base_layout_params['width']
+        self.height = self.base_layout_params['height']
+        self.num_players = self.base_layout_params['num_players']
+        self.size = self.width * self.height
+
+        self.horizon = horizon
+
+        sim = TaichiSimulator(
+            num_worlds = num_envs,
+            **self.base_layout_params
+        )
+
+        # sim_device = torch.device('cpu') if use_cpu or not torch.cuda.is_available() else torch.device('cuda')
+        
+        full_obs_size = self.width * self.height * (5 * self.num_players + 16)
+
+        self.sim = sim
+
+        # self.static_dones = self.sim.done_tensor().to_torch()
+        # self.static_active_agents = self.sim.active_agent_tensor().to_torch().to(torch.bool)
+        
+        # self.static_actions = self.sim.action_tensor().to_torch()
+        # self.static_observations = self.sim.observation_tensor().to_torch()
+        # self.static_rewards = self.sim.reward_tensor().to_torch()
+        # self.static_worldID = self.sim.world_id_tensor().to_torch().to(torch.long)
+        # self.static_agentID = self.sim.agent_id_tensor().to_torch().to(torch.long)
+        # self.static_locationWorldID = self.sim.location_world_id_tensor().to_torch().to(torch.long)
+        # self.static_locationID = self.sim.location_id_tensor().to_torch().to(torch.long)
+        
+        # self.obs_size = full_obs_size
+        # self.state_size = full_obs_size
+        
+        # self.static_scattered_active_agents = self.static_active_agents.detach().clone()
+        # self.static_scattered_rewards = self.static_rewards.detach().clone()
+
+        # self.static_scattered_active_agents[self.static_agentID, self.static_worldID] = self.static_active_agents
+
+        # self.static_scattered_rewards[self.static_agentID, self.static_worldID] = self.static_rewards
+
+        if use_env_cpu:
+            env_device = torch.device('cpu')
+        else:
+            env_device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
+        super().__init__(num_envs, device=env_device, n_players=self.num_players)
+
+        # self.static_scattered_observations = torch.empty((self.height * self.width * self.num_players, self.num_envs, 5 * self.num_players + 16), dtype=torch.int8, device=sim_device)
+        # self.static_scattered_observations[self.static_locationID, self.static_locationWorldID, :] = self.static_observations[:, :, :5 * self.num_players + 16]
+
+        self.infos = [{}] * self.num_envs
+        
+        self.ego_ind = ego_agent_idx
+
+        self.observation_space = self._setup_observation_space()
+        self.share_observation_space = self.observation_space
+        self.action_space = gym.spaces.Discrete(Action.NUM_ACTIONS)
+
+        self.n_reset()
+
+    def _setup_observation_space(self):
+        obs_shape = np.array([self.width, self.height, 5 * self.num_players + 16])
+        return gym.spaces.MultiBinary(obs_shape)
+
+    def to_torch(self, a):
+        return a.to(self.device)
+
+    def get_obs(self):
+        obs0 = self.sim.observation.to_torch(device=self.device).reshape((self.num_players, self.num_envs, self.height, self.width, 5 * self.num_players + 16)).transpose(2, 3)
+        obs = [VectorObservation(torch.ones((self.num_envs,), dtype=torch.bool),
+                                 obs0[i])
+               for i in range(self.n_players)]
+
+        return obs
+
+    def n_step(self, actions):
+        # actions_device = self.static_agentID.get_device()
+        # actions = actions.to(actions_device if actions_device != -1 else torch.device('cpu'))
+        # self.static_actions.copy_(actions[self.static_agentID, self.static_worldID, :])
+        actions = actions.to(dtype=torch.int32)
+        self.sim.actions.from_torch(actions[:, :, 0])
+        self.sim.step()
+        
+        # self.static_scattered_rewards[self.static_agentID, self.static_worldID] = self.static_rewards
+
+        return self.get_obs(), self.sim.rewards.to_torch(device=self.device), self.sim.dones.to_torch(device=self.device), self.infos
+
+    def n_reset(self):
+        return self.get_obs()
+
+    def close(self, **kwargs):
+        pass
+
+
+from .overcooked_reimplement import DummyMDP
+
 MAX_NUM_INGREDIENTS = 3
 
 BASE_REW_SHAPING_PARAMS = {
     "PLACEMENT_IN_POT_REW": 3,
-    "DISH_PICKUP_REWARD": 3,
+    "DISH_PICKUP_REWARD": 0,
     "SOUP_PICKUP_REWARD": 5,
 }
 
@@ -144,7 +239,7 @@ ONION_SOURCE = 'O'
 TOMATO_SOURCE = 'T'
 DISH_SOURCE = 'D'
 SERVING = 'S'
-TERRAIN_TYPES = [AIR, POT, COUNTER, ONION_SOURCE, DISH_SOURCE, SERVING, TOMATO_SOURCE]
+TERRAIN_TYPES = [AIR, POT, COUNTER, ONION_SOURCE, TOMATO_SOURCE, DISH_SOURCE, SERVING]
 PLAYER_NUMS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
                "!", "@", "#", "$", "%", "^", "&", "*", "(", ")",
                "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
@@ -170,14 +265,6 @@ def get_base_layout_params(layout_name: str, horizon, max_num_players=None):
         base_layout_params = read_layout_dict(layout_name)
     grid = base_layout_params['grid']
     del base_layout_params['grid']
-
-    if 'start_order_list' in base_layout_params:
-        # base_layout_params['start_all_orders'] = base_layout_params['start_order_list']
-        del base_layout_params['start_order_list']
-
-    if 'num_items_for_soup' in base_layout_params:
-        del base_layout_params['num_items_for_soup']
-
     grid = [layout_row.strip() for layout_row in grid.split('\n')]
     layout_grid = [[c for c in row] for row in grid]
 
@@ -262,17 +349,15 @@ def get_base_layout_params(layout_name: str, horizon, max_num_players=None):
             values[((MAX_NUM_INGREDIENTS + 1) * num_onions + num_tomatoes)] = value
 
     if 'delivery_reward' in base_layout_params:
-        # print("BRUH")
         values = [base_layout_params['delivery_reward']] * ((MAX_NUM_INGREDIENTS + 1) ** 2)
-        # print(values)
         del base_layout_params['delivery_reward']
 
-    # for i in range(len(values)):
-    #     if base_layout_params['start_bonus_orders'][i]:
-    #         values[i] *= base_layout_params['order_bonus']
+    for i in range(len(values)):
+        if base_layout_params['start_bonus_orders'][i]:
+            values[i] *= base_layout_params['order_bonus']
 
-    #     if not base_layout_params['start_all_orders'][i]:
-    #         values[i] = 0
+        if not base_layout_params['start_all_orders'][i]:
+            values[i] = 0
 
     del base_layout_params['order_bonus']
 
@@ -286,31 +371,83 @@ def get_base_layout_params(layout_name: str, horizon, max_num_players=None):
     return base_layout_params
 
 
-
-class PantheonOvercooked(MultiAgentEnv):
-
-    def __init__(self, layout_name, ego_agent_idx=0, horizon=200):
+class SimplifiedOvercooked(MultiAgentEnv):
+    def __init__(self, layout_name, ego_agent_idx=0, horizon=400, num_players=None):
         self.layout_name = layout_name
+        self.base_layout_params = get_base_layout_params(layout_name, horizon, max_num_players=num_players)
+        self.width = self.base_layout_params['width']
+        self.height = self.base_layout_params['height']
+        self.size = self.width * self.height
 
-        self.mdp = OvercookedGridworld.from_layout_name(self.layout_name, rew_shaping_params=BASE_REW_SHAPING_PARAMS)
-        self.base_env = OvercookedEnv(self.mdp, horizon=horizon)
-        super().__init__(ego_ind=ego_agent_idx, n_players=2)
+        self.mdp = DummyMDP(**self.base_layout_params)
+        self.horizon = horizon
+
+        super().__init__(ego_ind=ego_agent_idx, n_players=self.base_layout_params['num_players'])
 
         self.featurize_fn = lambda x: self.mdp.lossless_state_encoding(x)
 
         self.observation_space = self._setup_observation_space()
         self.share_observation_space = self.observation_space
-        self.action_space = gym.spaces.Discrete(len(Action.ALL_ACTIONS))
+        self.action_space = gym.spaces.Discrete(Action.NUM_ACTIONS)
 
         self.n_reset()
 
     def _setup_observation_space(self):
-        dummy_state = self.mdp.get_standard_start_state()
-        obs_shape = self.featurize_fn(dummy_state)[0].shape
+        obs_shape = np.array([self.mdp.width, self.mdp.height, 5 * self.mdp.num_players + 16])
         return gym.spaces.MultiBinary(obs_shape)
 
     def get_mask(self):
-        return np.array([1] * len(Action.ALL_ACTIONS), dtype=bool)
+        return np.array([1] * Action.NUM_ACTIONS, dtype=bool)
+
+    def get_obs(self, state):
+        obs = self.featurize_fn(state)
+        obs = [ob0[:self.size, :].reshape((self.height, self.width, -1)).transpose((1, 0, 2)) for ob0 in obs]
+        # ob1 = ob1[:self.size, :].reshape((self.height, self.width, -1)).transpose((1, 0, 2))
+        return [(ob0, ob0, self.get_mask()) for ob0 in obs]
+
+    def n_step(self, actions):
+        actions = [act.item() for act in actions]
+
+        next_state, mdp_infos = self.mdp.get_state_transition(self.state, actions)
+
+        self.state = next_state
+
+        done = self.state.timestep >= self.horizon
+
+        reward = sum(mdp_infos)
+        info = {}
+
+        return tuple(range(self.mdp.num_players)), self.get_obs(next_state), [reward] * self.mdp.num_players, done, info
+
+    def n_reset(self):
+        self.state = self.mdp.get_standard_start_state()
+        return tuple(range(self.mdp.num_players)), self.get_obs(self.state)
+
+
+class PantheonOvercooked(MultiAgentEnv):
+
+    def __init__(self, layout_name, ego_agent_idx=0, horizon=400):
+        self.layout_name = layout_name
+
+        self.mdp = OvercookedGridworld.from_layout_name(self.layout_name, rew_shaping_params=BASE_REW_SHAPING_PARAMS)
+        self.base_env = OvercookedEnv.from_mdp(self.mdp, horizon=horizon, info_level=0)
+        super().__init__(ego_ind=ego_agent_idx, n_players=2)
+
+        self.featurize_fn = lambda x: self.mdp.lossless_state_encoding(
+            x, horizon=horizon)
+
+        self.observation_space = self._setup_observation_space()
+        self.share_observation_space = self.observation_space
+        self.action_space = gym.spaces.Discrete(Action.NUM_ACTIONS)
+
+        self.n_reset()
+
+    def _setup_observation_space(self):
+        obs_shape = self.mdp.get_lossless_state_encoding_shape()
+        return gym.spaces.MultiBinary(obs_shape)
+
+    def get_mask(self):
+        return np.array([1] * Action.NUM_ACTIONS, dtype=bool)
 
     def get_obs(self, state):
         ob0, ob1 = self.featurize_fn(state)
@@ -321,7 +458,7 @@ class PantheonOvercooked(MultiAgentEnv):
         a1 = Action.INDEX_TO_ACTION[actions[1]]
 
         next_state, reward, done, info = self.base_env.step((a0, a1))
-        reward = reward + info['shaped_r']
+        reward = reward + sum(info['shaped_r_by_agent'])
 
         return (0, 1), self.get_obs(next_state), (reward, reward), done, info
 
@@ -333,7 +470,7 @@ class PantheonOvercooked(MultiAgentEnv):
 def init_validation(layout_name, num_envs, num_players):
     global VALIDATION_ENVS
     VALIDATION_ENVS = [
-        PantheonOvercooked(layout_name) for _ in range(num_envs)
+        SimplifiedOvercooked(layout_name, num_players=num_players) for _ in range(num_envs)
     ]
     return [x.n_reset()[1] for x in VALIDATION_ENVS]
 
@@ -385,13 +522,6 @@ def validate_step(states, actions, dones, nextstates, rewards, verbose=True):
                 # print("madrona transition:", nextstates[:, i])
                 # print("numpy transition:", truenext)
                 print("TRANSITIONS are not equal", i)
-                print("List of objects", VALIDATION_ENVS[i].base_env.state.objects)
-                print("ALL_OBJECTS", VALIDATION_ENVS[i].base_env.state.all_objects_list)
-                print("unowed", VALIDATION_ENVS[i].base_env.state.unowned_objects_by_type)
-                print('player', VALIDATION_ENVS[i].base_env.state.player_objects_by_type)
-                # for obj in VALIDATION_ENVS[i].base_env.state.all_objects_list:
-                #     print(obj.name, obj.position)
-                print(VALIDATION_ENVS[i].base_env.mdp.lossless_state_encoding(VALIDATION_ENVS[i].base_env.state)[0][np.abs(truenext - nextstates[:, i]).nonzero()[1:]])
             retval = False
 
     return retval

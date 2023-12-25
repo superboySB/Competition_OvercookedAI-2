@@ -1,14 +1,11 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 
 #include <madrona/py/utils.hpp>
 #include <madrona/exec_mode.hpp>
 
-using IntVector = std::vector<int64_t>;
-
-namespace Overcooked {
+namespace Balance {
 
   class Manager {
   public:
@@ -17,20 +14,6 @@ namespace Overcooked {
       madrona::ExecMode execMode;
       int gpuID;
       uint32_t numWorlds;
-        
-      IntVector terrain;
-      int64_t height;
-      int64_t width;
-      int64_t num_players;
-      IntVector start_player_x;
-      IntVector start_player_y;
-      int64_t placement_in_pot_rew;
-      int64_t dish_pickup_rew;
-      int64_t soup_pickup_rew;
-      IntVector recipe_values;
-      IntVector recipe_times;
-      int64_t horizon;
-        
       bool debugCompile;
     };
 
@@ -48,8 +31,6 @@ namespace Overcooked {
 
     MADRONA_IMPORT madrona::py::Tensor worldIDTensor() const;
     MADRONA_IMPORT madrona::py::Tensor agentIDTensor() const;
-    MADRONA_IMPORT madrona::py::Tensor locationWorldIDTensor() const;
-    MADRONA_IMPORT madrona::py::Tensor locationIDTensor() const;
 
 
   private:

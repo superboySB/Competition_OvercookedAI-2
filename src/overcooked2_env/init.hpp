@@ -2,7 +2,7 @@
 
 #include <madrona/sync.hpp>
 
-namespace Overcooked {
+namespace Simplecooked {
 
   struct EpisodeManager {
     madrona::AtomicU32 curEpisode;

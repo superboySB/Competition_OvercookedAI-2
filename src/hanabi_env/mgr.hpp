@@ -1,35 +1,25 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 
 #include <madrona/py/utils.hpp>
 #include <madrona/exec_mode.hpp>
 
-using IntVector = std::vector<int64_t>;
-
-namespace Overcooked {
+namespace Hanabi {
 
   class Manager {
   public:
-    
+
     struct Config {
       madrona::ExecMode execMode;
       int gpuID;
       uint32_t numWorlds;
-        
-      IntVector terrain;
-      int64_t height;
-      int64_t width;
-      int64_t num_players;
-      IntVector start_player_x;
-      IntVector start_player_y;
-      int64_t placement_in_pot_rew;
-      int64_t dish_pickup_rew;
-      int64_t soup_pickup_rew;
-      IntVector recipe_values;
-      IntVector recipe_times;
-      int64_t horizon;
+
+      uint32_t colors;
+      uint32_t ranks;
+      uint32_t players;
+      uint32_t max_information_tokens;
+      uint32_t max_life_tokens;
         
       bool debugCompile;
     };
@@ -43,13 +33,12 @@ namespace Overcooked {
     MADRONA_IMPORT madrona::py::Tensor activeAgentTensor() const;
     MADRONA_IMPORT madrona::py::Tensor actionTensor() const;
     MADRONA_IMPORT madrona::py::Tensor observationTensor() const;
+    MADRONA_IMPORT madrona::py::Tensor agentStateTensor() const;
     MADRONA_IMPORT madrona::py::Tensor actionMaskTensor() const;
     MADRONA_IMPORT madrona::py::Tensor rewardTensor() const;
 
     MADRONA_IMPORT madrona::py::Tensor worldIDTensor() const;
     MADRONA_IMPORT madrona::py::Tensor agentIDTensor() const;
-    MADRONA_IMPORT madrona::py::Tensor locationWorldIDTensor() const;
-    MADRONA_IMPORT madrona::py::Tensor locationIDTensor() const;
 
 
   private:

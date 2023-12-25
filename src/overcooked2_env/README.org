@@ -1,0 +1,98 @@
+* Overcooked Environment (JS-compatible)
+[[https://colab.research.google.com/github/bsarkar321/madrona_rl_envs/blob/master/overcooked_compiled_colab.ipynb][https://colab.research.google.com/assets/colab-badge.svg]]
+
+This is an implementation of an older version of the open source [[https://github.com/HumanCompatibleAI/overcooked_ai][Overcooked-AI]] environment that is compatible with a javascript demo, built on the [[https://madrona-engine.github.io/][Madrona game engine]]. You can also read our [[https://bsarkar321.github.io/blog/overcooked_madrona/index.html][post]] about the process of porting Overcooked to Madrona.
+
+** Installation
+
+If you have already followed the instructions from the [[file:../../README.md][main README]], Overcooked should already be installed. Otherwise, follow the following directions:
+
+#+begin_src bash
+  conda create -n madrona python=3.10
+  conda activate madrona
+  pip install torch numpy tensorboard
+
+  git clone --recurse-submodules https://github.com/bsarkar321/madrona_rl_envs
+  mkdir build && cd build
+  cmake ..
+  make -j
+  cd ..
+
+  pip install -e .
+  pip install -e oldercooked_ai
+#+end_src
+
+#+begin_quote
+On some systems, you may need to specify the cuda toolkit directory for cmake as follows:
+
+#+begin_src bash
+  cmake -D CUDAToolkit_ROOT=/usr/local/cuda-12.0 ..
+#+end_src
+#+end_quote
+
+** Testing
+
+*** Correctness
+
+For testing correctness, ensure that the madrona conda environment is active and you are in the scripts directory.
+
+*For all of the following commands, the last line should be "Error rate: 0.0"*
+
+Verify that baseline (original overcooked-ai) installation passes tests:
+#+begin_src bash
+  python overcooked2_example.py --num-envs 32 --verbose --validation --asserts --use-baseline --layout simple
+  python overcooked2_example.py --num-envs 32 --verbose --validation --asserts --use-baseline --layout random1
+  python overcooked2_example.py --num-envs 32 --verbose --validation --asserts --use-baseline --layout scenario1_s
+#+end_src
+
+Verify that the simplified implementation passes tests:
+#+begin_src bash
+  python overcooked2_example.py --num-envs 32 --verbose --validation --asserts --use-simplified --layout simple
+  python overcooked2_example.py --num-envs 32 --verbose --validation --asserts --use-simplified --layout random1
+  python overcooked2_example.py --num-envs 32 --verbose --validation --asserts --use-simplified --layout scenario1_s
+#+end_src
+
+Verify that CPU version passes tests:
+#+begin_src bash
+  python overcooked2_example.py --num-envs 100 --verbose --validation --asserts --use-cpu --layout simple
+  python overcooked2_example.py --num-envs 100 --verbose --validation --asserts --use-cpu --layout random1
+  python overcooked2_example.py --num-envs 100 --verbose --validation --asserts --use-cpu --layout scenario1_s
+#+end_src
+
+Verify that debug GPU version passes tests (note: remove /tmp/bugsimplecache if it exists):
+#+begin_src bash
+  MADRONA_MWGPU_KERNEL_CACHE=/tmp/bugsimplecache python overcooked2_example.py --num-envs 100 --verbose --validation --asserts --debug-compile --layout simple
+  MADRONA_MWGPU_KERNEL_CACHE=/tmp/bugsimplecache python overcooked2_example.py --num-envs 100 --verbose --validation --asserts --debug-compile --layout random1
+  MADRONA_MWGPU_KERNEL_CACHE=/tmp/bugsimplecache python overcooked2_example.py --num-envs 100 --verbose --validation --asserts --debug-compile --layout scenario1_s
+#+end_src
+
+Verify that optimized GPU version passes tests (note: remove /tmp/simplecache if it exists):
+#+begin_src bash
+  MADRONA_MWGPU_KERNEL_CACHE=/tmp/simplecache python overcooked2_example.py --num-envs 100 --verbose --validation --asserts --layout simple
+  MADRONA_MWGPU_KERNEL_CACHE=/tmp/simplecache python overcooked2_example.py --num-envs 100 --verbose --validation --asserts --layout random1
+  MADRONA_MWGPU_KERNEL_CACHE=/tmp/simplecache python overcooked2_example.py --num-envs 100 --verbose --validation --asserts --layout scenario1_s
+#+end_src
+
+*** Performance
+
+After validating correctness, we can determine the simulation throughput (in terms of steps * worlds / sec). Note that, in general, throughput increases as the number of environments increases.
+
+To test the baseline, run the following command.
+#+begin_src bash
+  python overcooked2_example.py --num-envs 32 --use-baseline
+#+end_src
+
+To test the madrona versions for cpu and gpu, run the following commands:
+#+begin_src bash
+  python overcooked2_example.py --use-cpu --num-envs 32
+  MADRONA_MWGPU_KERNEL_CACHE=/tmp/simplecache python overcooked2_example.py --num-envs 32
+#+end_src
+
+When testing using 8 cores of an AMD EPYC 7402 Processor, an A40 GPU, and 64 GB RAM, I get the following performance numbers in the cramped_room environment:
+| num-envs | baseline | madrona cpu | madrona gpu |
+|----------+----------+-------------+-------------|
+|       32 | 2400     |      102000 |      138000 |
+|      100 | 2400     |      239000 |      424000 |
+|     1000 | -        |      498000 |     3680000 |
+|    10000 | -        |      401000 |    19100000 |
+|   100000 | -        |           - |    18500000 |

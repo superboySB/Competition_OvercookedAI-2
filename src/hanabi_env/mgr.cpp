@@ -19,11 +19,11 @@
 using namespace madrona;
 using namespace madrona::py;
 
-namespace Overcooked {
+namespace Hanabi {
 
   using CPUExecutor =
     TaskGraphExecutor<Engine, Sim, Config, WorldInit>;
-    
+
   struct Manager::Impl {
     Config cfg;
     EpisodeManager *episodeMgr;
@@ -45,7 +45,7 @@ namespace Overcooked {
     CPUExecutor mwCPU;
 
     inline CPUImpl(const Config &cfg,
-                   const Overcooked::Config &app_cfg,
+                   const Hanabi::Config &app_cfg,
                    EpisodeManager *episode_mgr,
                    WorldInit *world_inits)
       : Impl(cfg, episode_mgr),
@@ -81,7 +81,7 @@ namespace Overcooked {
     MWCudaExecutor mwGPU;
 
     inline GPUImpl(const Config &cfg,
-                   const Overcooked::Config &app_cfg,
+                   const Hanabi::Config &app_cfg,
                    EpisodeManager *episode_mgr,
                    WorldInit *world_inits)
       : Impl(cfg, episode_mgr),
@@ -89,18 +89,18 @@ namespace Overcooked {
 	  .worldInitPtr = world_inits,
 	  .numWorldInitBytes = sizeof(WorldInit),
 	  .userConfigPtr = (void *)&app_cfg,
-	  .numUserConfigBytes = sizeof(Overcooked::Config),
+	  .numUserConfigBytes = sizeof(Hanabi::Config),
 	  .numWorldDataBytes = sizeof(Sim),
 	  .worldDataAlignment = alignof(Sim),
 	  .numWorlds = cfg.numWorlds,
-	  .numExportedBuffers = (uint32_t)ExportID::NumExports, 
+	  .numExportedBuffers = (uint32_t)ExportID::NumExports,
 	  .gpuID = (uint32_t)cfg.gpuID,
 	  // .cameraMode = render::CameraMode::None,
 	  // .renderWidth = 0,
 	  // .renderHeight = 0,
 	}, {
-	  { OVERCOOKED_SRC_LIST },
-	  { OVERCOOKED_COMPILE_FLAGS },
+	  { HANABI_SRC_LIST },
+	  { HANABI_COMPILE_FLAGS },
 	  cfg.debugCompile ? CompileConfig::OptMode::Debug :
 	  CompileConfig::OptMode::LTO
 	})
@@ -122,13 +122,19 @@ namespace Overcooked {
 #endif
 
   static HeapArray<WorldInit> setupWorldInitData(int64_t num_worlds,
-						 EpisodeManager *episode_mgr)
+						 EpisodeManager *episode_mgr,
+						 const Manager::Config &cfg)
   {
     HeapArray<WorldInit> world_inits(num_worlds);
 
     for (int64_t i = 0; i < num_worlds; i++) {
       world_inits[i] = WorldInit {
-	episode_mgr
+	episode_mgr,
+	cfg.colors,
+	cfg.ranks,
+	cfg.players,
+	cfg.max_information_tokens,
+	cfg.max_life_tokens
       };
     }
 
@@ -137,39 +143,11 @@ namespace Overcooked {
 
   Manager::Impl * Manager::Impl::init(const Manager::Config &cfg)
   {
-    Overcooked::Config app_cfg {
-      // .terrain = cfg.terrain,
-      .height = cfg.height,
-      .width = cfg.width,
-      .num_players = cfg.num_players,
-      // .start_player_x = cfg.start_player_x,
-      // .start_player_y = cfg.start_player_y,
-      .placement_in_pot_rew = cfg.placement_in_pot_rew,
-      .dish_pickup_rew = cfg.dish_pickup_rew,
-      .soup_pickup_rew = cfg.soup_pickup_rew,
-      // .recipe_values = cfg.recipe_values,
-      // .recipe_times = cfg.recipe_times,
-      .horizon = cfg.horizon,
-    };
-
-    for (int r = 0; r < NUM_RECIPES; r++) {
-      app_cfg.recipe_values[r] = cfg.recipe_values[r];
-      app_cfg.recipe_times[r] = cfg.recipe_times[r];
-    }
-
-    for (int p = 0; p < cfg.num_players; p++) {
-      app_cfg.start_player_x[p] = cfg.start_player_x[p];
-      app_cfg.start_player_y[p] = cfg.start_player_y[p];
-    }
-
-    for (int x = 0; x < cfg.height * cfg.width; x++) {
-      app_cfg.terrain[x] = (Overcooked::TerrainT)cfg.terrain[x];
-    }
-    
+    Hanabi::Config app_cfg {cfg.players};
     switch (cfg.execMode) {
     case ExecMode::CPU: {
       EpisodeManager *episode_mgr = new EpisodeManager { 0 };
-      HeapArray<WorldInit> world_inits = setupWorldInitData(cfg.numWorlds, episode_mgr);
+      HeapArray<WorldInit> world_inits = setupWorldInitData(cfg.numWorlds, episode_mgr, cfg);
       return new CPUImpl(cfg, app_cfg, episode_mgr, world_inits.data());
     } break;
     case ExecMode::CUDA: {
@@ -179,7 +157,7 @@ namespace Overcooked {
       EpisodeManager *episode_mgr = (EpisodeManager *)cu::allocGPU(sizeof(EpisodeManager));
       // Set the current episode count to 0
       REQ_CUDA(cudaMemset(episode_mgr, 0, sizeof(EpisodeManager)));
-      HeapArray<WorldInit> world_inits = setupWorldInitData(cfg.numWorlds, episode_mgr);
+      HeapArray<WorldInit> world_inits = setupWorldInitData(cfg.numWorlds, episode_mgr, cfg);
       return new GPUImpl(cfg, app_cfg, episode_mgr, world_inits.data());
 #endif
     } break;
@@ -207,55 +185,50 @@ namespace Overcooked {
   MADRONA_EXPORT Tensor Manager::activeAgentTensor() const
   {
     return impl_->exportTensor(ExportID::ActiveAgent, Tensor::ElementType::Int32,
-			       {impl_->cfg.num_players, impl_->cfg.numWorlds});
+			       {2, impl_->cfg.numWorlds});
   }
 
   MADRONA_EXPORT Tensor Manager::actionTensor() const
   {
     return impl_->exportTensor(ExportID::Action, Tensor::ElementType::Int32,
-			       {impl_->cfg.num_players, impl_->cfg.numWorlds, 1});
+			       {2, impl_->cfg.numWorlds, 1});
   }
 
   MADRONA_EXPORT Tensor Manager::observationTensor() const
   {
     return impl_->exportTensor(ExportID::Observation, Tensor::ElementType::Int8,
-                               {impl_->cfg.num_players * impl_->cfg.width * impl_->cfg.height, impl_->cfg.numWorlds, sizeof(LocationXObservation)});
+                               {N_PLAYERS, impl_->cfg.numWorlds, sizeof(Observation)});
   }
+
+  MADRONA_EXPORT Tensor Manager::agentStateTensor() const
+  {
+    return impl_->exportTensor(ExportID::State, Tensor::ElementType::Int8,
+                               {N_PLAYERS, impl_->cfg.numWorlds, sizeof(State)});
+  }
+
 
   MADRONA_EXPORT Tensor Manager::actionMaskTensor() const
   {
     return impl_->exportTensor(ExportID::ActionMask, Tensor::ElementType::Int32,
-			       {impl_->cfg.num_players, impl_->cfg.numWorlds, NUM_MOVES});
+			       {2, impl_->cfg.numWorlds, NUM_MOVES});
   }
     
   MADRONA_EXPORT Tensor Manager::rewardTensor() const
   {
-    return impl_->exportTensor(ExportID::Reward, Tensor::ElementType::Int32,
-			       {impl_->cfg.num_players, impl_->cfg.numWorlds});
+    return impl_->exportTensor(ExportID::Reward, Tensor::ElementType::Float32,
+			       {2, impl_->cfg.numWorlds});
   }
 
   MADRONA_EXPORT Tensor Manager::worldIDTensor() const
   {
     return impl_->exportTensor(ExportID::WorldID, Tensor::ElementType::Int32,
-			       {impl_->cfg.num_players, impl_->cfg.numWorlds});
+			       {2, impl_->cfg.numWorlds});
   }
 
   MADRONA_EXPORT Tensor Manager::agentIDTensor() const
   {
     return impl_->exportTensor(ExportID::AgentID, Tensor::ElementType::Int32,
-			       {impl_->cfg.num_players, impl_->cfg.numWorlds});
-  }
-
-  MADRONA_EXPORT Tensor Manager::locationWorldIDTensor() const
-  {
-    return impl_->exportTensor(ExportID::LocationWorldID, Tensor::ElementType::Int32,
-			       {impl_->cfg.num_players * impl_->cfg.width * impl_->cfg.height, impl_->cfg.numWorlds});
-  }
-
-  MADRONA_EXPORT Tensor Manager::locationIDTensor() const
-  {
-    return impl_->exportTensor(ExportID::LocationID, Tensor::ElementType::Int32,
-			       {impl_->cfg.num_players * impl_->cfg.width * impl_->cfg.height, impl_->cfg.numWorlds});
+			       {2, impl_->cfg.numWorlds});
   }
 
 }
