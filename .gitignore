@@ -3,7 +3,6 @@
 .DS_Store
 
 data
-results
 *.pyc
 /gifs/
 build
@@ -19,8 +18,8 @@ logs
 *.out
 *.log
 png
-*.pt
 biased_eval/*
+results/
 
 docker
 dataset
