@@ -1,6 +1,7 @@
 .idea*
 /logs
 .DS_Store
+.hypothesis
 
 data
 *.pyc

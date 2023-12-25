@@ -22,6 +22,17 @@ mkdir build && cd build && cmake -D CUDAToolkit_ROOT=/usr/local/cuda .. && make 
 cd .. && pip install -e . && pip install -e overcooked_ai
 ```
 
+### 基本使用方法
+这是比赛submission的本地运行验证文件，目前需要将特征与训好的模型对齐
+```sh
+python run_log.py
+```
+训练madrona并测试，可以对比一些其它文章对这些layout的训练结果，在公测上对比
+```sh
+python train_and_evaluate.py
+```
+
+
 ### 目前计划 1225
 1. 尝试根据比赛的obs，并且仔细看一下我现在solution训练的obs，去找到对应关系，使得我的模型可以apply，原理上可以参考这个博客，哈哈哈，我还是用类似GPU仿真这样的玩具，发现效果还不错
 2. 尝试看能不能submission里面放三个pt（现在已经训出来了，每一个都是1千万步，你可以尝试在实验室机器配环境训练，差不多1块卡训1000万步只需要5分钟），看看官方是不是会有限制，但目前确实三个模型如果都是CNN的话，地图大小不一样，那模型的维度也都不一样。。。如果限制只能交一个pt，那可能会有distillation的需求
@@ -29,7 +40,7 @@ cd .. && pip install -e . && pip install -e overcooked_ai
 
 还有不到1个月开始正赛，我觉得接下来这三件事情搞完应该能有一个还可以的成绩，也脱离了前沿顶会，追求了工程的极致。第一步应该是最难的地方，我昨天接通了这个训练后，也一直在看，这个要结合[作者的博客](https://bsarkar321.github.io/blog/overcooked_madrona/index.html)（这个作者是斯坦福做ZSC的那个组的学生，其实我们也算是紧跟前沿），以及实际的C++代码、Python代码，去和比赛定义的环境作对比
 
-## 比赛官方介绍
+## 以下是比赛官方介绍
 
 ### OvercookedAI-Integrated II
 <img src='https://jidi-images.oss-cn-beijing.aliyuncs.com/jidi/env103.gif' width=400>

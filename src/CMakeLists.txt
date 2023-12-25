@@ -1,2 +1,2 @@
-add_subdirectory(overcooked2_env)
+add_subdirectory(overcooked_env)
 

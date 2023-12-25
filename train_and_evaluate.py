@@ -14,18 +14,23 @@ import time
 import numpy as np
 import random
 
+# TODO：其它超参数可以参考其它zsc论文与mappo
 args = get_config().parse_args("")
-args.num_env_steps = 10000000 # 10000000 for 1 RTX 3090,可以尝试开的更大
+
+# TODO：10000000 for 1 RTX 3090,可以尝试开的更大
+args.num_env_steps = 10000000 
 args.episode_length = 400
 args.env_name = "overcooked"
 args.seed = 1
-# cramped_room_tomato, forced_coordination_tomato, soup_coordination
+
+# TODO：比赛环境 cramped_room_tomato, forced_coordination_tomato, soup_coordination
 args.over_layout = "soup_coordination"
 args.run_dir = "sp"
 args.restored = 0
 args.cuda = True
 
-args.n_rollout_threads = 128 # 128 for 1 RTX 3090,可以尝试开的更大
+# TODO：128 for 1 RTX 3090,可以尝试开的更大
+args.n_rollout_threads = 128 
 args.ppo_epoch = 15
 args.hidden_size = 64
 
