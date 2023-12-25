@@ -11,7 +11,7 @@ docker build -t zsc_image:1.0 .
 
 docker run -itd --privileged -v /tmp/.X11-unix:/tmp/.X11-unix:ro -e DISPLAY=$DISPLAY --gpus all --network=host --name=zsc zsc_image:1.0 /bin/bash
 
-conda create -n madrona python=3.10 && conda activate madrona 
+conda create -n madrona python=3.10 && conda activate madrona && pip install torch numpy tensorboard 
 
 cd /workspace && git clone https://github.com/superboySB/Competition_OvercookedAI-2 && cd Competition_OvercookedAI-2 && git submodule update --init --recursive && mkdir build && cd build && cmake -D CUDAToolkit_ROOT=/usr/local/cuda .. && make -j8
 
