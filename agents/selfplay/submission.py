@@ -59,9 +59,9 @@ class Policy(nn.Module):
         x = x.to(dtype=torch.float)
         x = x.permute((0, 3, 1, 2))  # 调整x的形状以适应网络
         x = self.base(x)
-        action_out = torch.distributions.Categorical(self.action_out(x))
-        greedy_action = action_out.mode()
-        return greedy_action
+        action_out = torch.distributions.Categorical(logits=self.action_out(x))
+        greedy_action = action_out.mode
+        return greedy_action[0]
 
 for i,layout_name in enumerate(game_pool):
     agent_index = i%2
@@ -72,11 +72,11 @@ for i,layout_name in enumerate(game_pool):
     obs = mdp_pool[args.index].lossless_state_encoding(dummy_state)[agent_index]
     width = obs.shape[0]
     height = obs.shape[1]
-    # channels = obs.shape[2]
-    channels = 20
+    channels = obs.shape[2]
+    # channels = 20
     policy_i = Policy(width,height,channels)
     actor_net = os.path.dirname(os.path.abspath(__file__)) + f"/{layout_name}.pth"
-    policy_actor_state_dict = torch.load(str(actor_net))
+    policy_actor_state_dict = torch.load(str(actor_net), map_location=torch.device('cpu'))
     # 更新state_dict中的键
     new_state_dict = {key_map.get(k, k): v for k, v in policy_actor_state_dict.items()}
     policy_i.load_state_dict(new_state_dict)
@@ -84,7 +84,7 @@ for i,layout_name in enumerate(game_pool):
 
 
 def my_controller(observation, action_space, is_act_continuous=False):
-    if observation["controlled_player_index"]==0 and observation["new_map"]:
+    if observation["new_map"]:
         args.index += 1
     state = OvercookedState.from_dict(observation)
     obs = mdp_pool[args.index].lossless_state_encoding(state)[observation["controlled_player_index"]]
@@ -92,13 +92,13 @@ def my_controller(observation, action_space, is_act_continuous=False):
     agent_action = []
     for i in range(len(action_space)):
         # Random
-        action_ = sample_single_dim(action_space[i], is_act_continuous)
+        # action_ = sample_single_dim(action_space[i], is_act_continuous)
         # ---------------------------------------------------------------
         # selfplay policy
-        # each = [0] * action_space[i].n
-        # idx = policy_pool[args.index](obs)
-        # each[idx] = 1
-        # action_ = each
+        each = [0] * action_space[i].n
+        idx = policy_pool[args.index](torch.from_numpy(obs[None, :]))
+        each[idx] = 1
+        action_ = each
 
         agent_action.append(action_)
     return agent_action

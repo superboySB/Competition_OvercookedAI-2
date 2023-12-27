@@ -10,15 +10,15 @@
 #include "init.hpp"
 
 #define NUM_MOVES 6
-#define MAX_SIZE 100
-#define MAX_NUM_PLAYERS 2
+#define MAX_SIZE 10000
+#define MAX_NUM_PLAYERS 64
 #define MAX_NUM_INGREDIENTS 3
 
 #define NUM_RECIPES ((MAX_NUM_INGREDIENTS + 1) * (MAX_NUM_INGREDIENTS + 1))
 
 using IntVector = std::vector<int64_t>;
 
-namespace Simplecooked {
+namespace Overcooked {
 
   enum class ExportID : uint32_t {
     WorldReset,
@@ -37,7 +37,7 @@ namespace Simplecooked {
   };
 
   enum ActionT: int32_t { NORTH=0, SOUTH=1, EAST=2, WEST=3, STAY=4, INTERACT=5 };
-  enum TerrainT: uint8_t { AIR, POT, COUNTER, ONION_SOURCE, DISH_SOURCE, SERVING, TOMATO_SOURCE};
+  enum TerrainT: uint8_t { AIR, POT, COUNTER, ONION_SOURCE, TOMATO_SOURCE, DISH_SOURCE, SERVING};
   enum ObjectT: uint8_t { NONE, TOMATO, ONION, DISH, SOUP};
 
   struct RendererInitStub {};
@@ -102,9 +102,6 @@ namespace Simplecooked {
     madrona::Atomic<int32_t> calculated_reward;
 
     madrona::Atomic<bool> should_update_pos;
-
-    uint8_t num_pots;
-    uint8_t num_dishes_out;
   };
 
   struct ActiveAgent {
@@ -126,7 +123,7 @@ namespace Simplecooked {
   struct PotType : public madrona::Archetype<PotInfo> {};
 
   struct LocationXObservation {
-    uint8_t x[5 * MAX_NUM_PLAYERS + 10];
+    uint8_t x[5 * MAX_NUM_PLAYERS + 16];
   };
 
   struct LocationXID {

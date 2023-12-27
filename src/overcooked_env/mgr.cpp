@@ -19,7 +19,7 @@
 using namespace madrona;
 using namespace madrona::py;
 
-namespace Simplecooked {
+namespace Overcooked {
 
   using CPUExecutor =
     TaskGraphExecutor<Engine, Sim, Config, WorldInit>;
@@ -45,7 +45,7 @@ namespace Simplecooked {
     CPUExecutor mwCPU;
 
     inline CPUImpl(const Config &cfg,
-                   const Simplecooked::Config &app_cfg,
+                   const Overcooked::Config &app_cfg,
                    EpisodeManager *episode_mgr,
                    WorldInit *world_inits)
       : Impl(cfg, episode_mgr),
@@ -81,7 +81,7 @@ namespace Simplecooked {
     MWCudaExecutor mwGPU;
 
     inline GPUImpl(const Config &cfg,
-                   const Simplecooked::Config &app_cfg,
+                   const Overcooked::Config &app_cfg,
                    EpisodeManager *episode_mgr,
                    WorldInit *world_inits)
       : Impl(cfg, episode_mgr),
@@ -89,7 +89,7 @@ namespace Simplecooked {
 	  .worldInitPtr = world_inits,
 	  .numWorldInitBytes = sizeof(WorldInit),
 	  .userConfigPtr = (void *)&app_cfg,
-	  .numUserConfigBytes = sizeof(Simplecooked::Config),
+	  .numUserConfigBytes = sizeof(Overcooked::Config),
 	  .numWorldDataBytes = sizeof(Sim),
 	  .worldDataAlignment = alignof(Sim),
 	  .numWorlds = cfg.numWorlds,
@@ -99,8 +99,8 @@ namespace Simplecooked {
 	  // .renderWidth = 0,
 	  // .renderHeight = 0,
 	}, {
-	  { SIMPLECOOKED_SRC_LIST },
-	  { SIMPLECOOKED_COMPILE_FLAGS },
+	  { OVERCOOKED_SRC_LIST },
+	  { OVERCOOKED_COMPILE_FLAGS },
 	  cfg.debugCompile ? CompileConfig::OptMode::Debug :
 	  CompileConfig::OptMode::LTO
 	})
@@ -137,7 +137,7 @@ namespace Simplecooked {
 
   Manager::Impl * Manager::Impl::init(const Manager::Config &cfg)
   {
-    Simplecooked::Config app_cfg {
+    Overcooked::Config app_cfg {
       // .terrain = cfg.terrain,
       .height = cfg.height,
       .width = cfg.width,
@@ -163,7 +163,7 @@ namespace Simplecooked {
     }
 
     for (int x = 0; x < cfg.height * cfg.width; x++) {
-      app_cfg.terrain[x] = (Simplecooked::TerrainT)cfg.terrain[x];
+      app_cfg.terrain[x] = (Overcooked::TerrainT)cfg.terrain[x];
     }
     
     switch (cfg.execMode) {

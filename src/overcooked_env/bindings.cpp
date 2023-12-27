@@ -6,12 +6,12 @@
 
 using IntVector = std::vector<int64_t>;
 
-namespace Simplecooked {
+namespace Overcooked {
 
-  NB_MODULE(madrona_simplecooked_example_python, m) {
+  NB_MODULE(madrona_overcooked_example_python, m) {
     madrona::py::setupMadronaSubmodule(m);
 
-    nb::class_<Manager> (m, "SimplecookedSimulator")
+    nb::class_<Manager> (m, "OvercookedSimulator")
       .def("__init__", [](Manager *self,
 			  madrona::py::PyExecMode exec_mode,
 			  int64_t gpu_id,

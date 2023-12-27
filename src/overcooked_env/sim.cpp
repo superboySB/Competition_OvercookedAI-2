@@ -7,7 +7,7 @@ using namespace madrona;
 using namespace madrona::math;
 
 
-namespace Simplecooked {
+namespace Overcooked {
 
     
   void Sim::registerTypes(ECSRegistry &registry, const Config &)
@@ -75,38 +75,58 @@ namespace Simplecooked {
     int32_t shift = 5 * ws.num_players;
     LocationData &dat = ctx.get<LocationData>(ctx.data().locations[loc]);
     Object &obj = dat.object;
+
+    if (ws.horizon - ws.timestep < 40) {
+      obs.x[shift + 15] = 1;
+    } else {
+      obs.x[shift + 15] = 0;
+    }
         
-    obs.x[shift + 5] = 0;
     obs.x[shift + 6] = 0;
     obs.x[shift + 7] = 0;
     obs.x[shift + 8] = 0;
     obs.x[shift + 9] = 0;
+    obs.x[shift + 10] = 0;
+    obs.x[shift + 11] = 0;
+    obs.x[shift + 12] = 0;
+    obs.x[shift + 13] = 0;
+    obs.x[shift + 14] = 0;
 
     if (obj.name == ObjectT::SOUP) {
       if (dat.terrain == TerrainT::POT) {
-        obs.x[shift + 5] = obj.num_onions;
-        if (obj.cooking_tick < 0) {
-          obs.x[shift + 6] = 0;
-        } else {
-          obs.x[shift + 6] = obj.cooking_tick;
-        }
-            } else {
-        obs.x[shift + 7] = 1;
+	if (obj.cooking_tick < 0) {
+	  obs.x[shift + 6] = obj.num_onions;
+	  obs.x[shift + 7] = obj.num_tomatoes;
+	} else {
+	  obs.x[shift + 8] = obj.num_onions;
+	  obs.x[shift + 9] = obj.num_tomatoes;
+	  obs.x[shift + 10] = get_time(ws, obj) - obj.cooking_tick;
+	  if (is_ready(ws, obj)) {
+	    obs.x[shift + 11] = 1;
+	  }
+	}
+      } else {
+	obs.x[shift + 8] = obj.num_onions;
+	obs.x[shift + 9] = obj.num_tomatoes;
+	obs.x[shift + 10] = 0;
+	obs.x[shift + 11] = 1;
       }
     } else if (obj.name == ObjectT::DISH) {
-      obs.x[shift + 8] = 1;
+      obs.x[shift + 12] = 1;
     } else if (obj.name == ObjectT::ONION) {
-      obs.x[shift + 9] = 1;
+      obs.x[shift + 13] = 1;
+    } else if (obj.name == ObjectT::TOMATO) {
+      obs.x[shift + 14] = 1;
     }
 
     if (dat.past_player != -1) {
       int32_t relative_player;
       if (dat.past_player == current_player) {
-          relative_player = 0;
+	relative_player = 0;
       } else if (dat.past_player < current_player) {
-          relative_player = dat.past_player + 1;
+	relative_player = dat.past_player + 1;
       } else {
-        relative_player = dat.past_player;
+	relative_player = dat.past_player;
       }
 
       obs.x[relative_player] = 0;
@@ -117,11 +137,11 @@ namespace Simplecooked {
       int other_player = dat.current_player;
       int i;
       if (other_player == current_player) {
-        i = 0;
+	i = 0;
       } else if (other_player < current_player) {
-        i = other_player + 1;
+	i = other_player + 1;
       } else {
-        i = other_player;
+	i = other_player;
       }
       PlayerState &ps = ctx.get<PlayerState>(ctx.data().agents[other_player]);
 
@@ -129,14 +149,19 @@ namespace Simplecooked {
       obs.x[ws.num_players + 4 * i + ps.orientation] = 1;
 
       if (ps.has_object()) {
-        Object &obj2 = ps.get_object();
-        if (obj2.name == ObjectT::SOUP) {
-          obs.x[shift + 7] = 1;
-        } else if (obj2.name == ObjectT::DISH) {
-          obs.x[shift + 8] = 1;
-        } else if (obj2.name == ObjectT::ONION) {
-          obs.x[shift + 9] = 1;
-        }
+	Object &obj2 = ps.get_object();
+	if (obj2.name == ObjectT::SOUP) {
+	  obs.x[shift + 8] = obj2.num_onions;
+	  obs.x[shift + 9] = obj2.num_tomatoes;
+	  obs.x[shift + 10] = 0;
+	  obs.x[shift + 11] = 1;
+	} else if (obj2.name == ObjectT::DISH) {
+	  obs.x[shift + 12] = 1;
+	} else if (obj2.name == ObjectT::ONION) {
+	  obs.x[shift + 13] = 1;
+	} else if (obj2.name == ObjectT::TOMATO) {
+	  obs.x[shift + 14] = 1;
+	}
       }
     }
   }
@@ -171,119 +196,167 @@ namespace Simplecooked {
     return point;
   }
 
-  inline int get_pot_states(Engine &ctx, WorldState &ws)
+  // REQUIRES: nothing
+  // MODIFIES: WorldState.calculated_reward
+  inline void pre_resolve_interacts(Engine &, WorldState &ws)
   {
-    int non_empty_pots = 0;
-    for (int p = 0; p < ws.num_pots; p++) {
-      int id = ctx.get<PotInfo>(ctx.data().pots[p]).id;
-      LocationData &dat = ctx.get<LocationData>(ctx.data().locations[id]);
-      if (dat.object.name != ObjectT::NONE && (dat.object.cooking_tick >= 0 || dat.object.num_ingredients() < MAX_NUM_INGREDIENTS)) {
-	non_empty_pots++;
-      }
-    }
-    return non_empty_pots;
+    ws.calculated_reward.store_relaxed(0);
   }
 
-  inline bool is_dish_pickup_useful(Engine &ctx, int non_empty_pots)
+  // REQUIRES: reset WorldState.calculated_reward, LocationData.num_interacting_players, original player.position, orientation, held_object
+  // MODIFIES: LocationData.num_interacting_players, LocationData.interacting_players, player.held_object, ws.calculated_reward
+  inline void resolve_interacts(Engine &ctx, PlayerState &player, AgentID &id, Action &action)
   {
-    int num_player_dishes = 0;
-    for (int p = 0; p < 2; p++) {
-      if (ctx.get<PlayerState>(ctx.data().agents[p]).held_object.name == ObjectT::DISH) {
-	num_player_dishes++;
+    int i = id.id;
+
+    player.interaction_index = -1;
+
+    if (action.choice != ActionT::INTERACT) {
+      return;
+    }
+
+    WorldState &ws = ctx.singleton<WorldState>();
+
+    int32_t pos = player.position;
+    int32_t o = player.orientation;
+
+    int32_t i_pos = move_in_direction(pos, o, ws.width);
+
+    LocationData &dat = ctx.get<LocationData>(ctx.data().locations[i_pos]);
+
+    TerrainT terrain_type = dat.terrain;
+
+    if (terrain_type == TerrainT::COUNTER) {
+      int player_loc_idx = dat.num_interacting_players.fetch_add_relaxed(1);
+      dat.interacting_players[player_loc_idx] = i;
+    } else if (terrain_type == TerrainT::ONION_SOURCE) {
+      if (player.held_object.name == ObjectT::NONE) {
+	player.held_object = { .name = ObjectT::ONION };
+      }
+    } else if (terrain_type == TerrainT::TOMATO_SOURCE) {
+      if (player.held_object.name == ObjectT::NONE) {
+	player.held_object = { .name = ObjectT::TOMATO };
+      }
+    } else if (terrain_type == TerrainT::DISH_SOURCE) {
+      if (player.held_object.name == ObjectT::NONE) {
+	player.held_object = { .name = ObjectT::DISH };
+      }
+    } else if (terrain_type == TerrainT::POT) {
+      int player_loc_idx = dat.num_interacting_players.fetch_add_relaxed(1);
+      dat.interacting_players[player_loc_idx] = i;
+    } else if (terrain_type == TerrainT::SERVING) {
+      if (player.has_object()) {
+	Object obj = player.get_object();
+	if (obj.name == ObjectT::SOUP) {
+	  ws.calculated_reward.fetch_add_relaxed(deliver_soup(ws, player, obj));
+	}
       }
     }
-    return num_player_dishes < non_empty_pots;
   }
 
-  inline void resolve_interacts(Engine &ctx, WorldState &ws)
+  // REQUIRES: original player.position, orientation, held_object
+  // MODIFIES: player.interaction_index
+  inline void setup_interact_time(Engine &ctx, PlayerState &ps, AgentID &id, Action &action)
   {
-    int32_t pot_states = get_pot_states(ctx, ws);
+    if (action.choice != ActionT::INTERACT) {
+      return;
+    }
+    WorldState &ws = ctx.singleton<WorldState>();
 
-    int rew = 0;
-
-    for (int i = 0; i < ws.num_players; i++) {
-      PlayerState &player = ctx.get<PlayerState>(ctx.data().agents[i]);
-      Action &action = ctx.get<Action>(ctx.data().agents[i]);
-
-      if (action.choice != ActionT::INTERACT) {
-	continue;
+    int32_t pos = ps.position;
+    int32_t o = ps.orientation;
+    
+    int32_t i_pos = move_in_direction(pos, o, ws.width);
+    LocationData &dat = ctx.get<LocationData>(ctx.data().locations[i_pos]);
+    TerrainT terrain_type = dat.terrain;
+    if (terrain_type == TerrainT::COUNTER || terrain_type == TerrainT::POT) {
+      ps.interaction_index = 0;
+      // max of 4
+      int num_int_players = dat.num_interacting_players.load_relaxed();
+      for (int i = 0; i < num_int_players; i++) {
+	if (dat.interacting_players[i] < id.id) {
+	  ps.interaction_index++;
+	}
       }
+    }
+  }
+
+  // REQUIRES: player.interaction_index, original position, orientation, held_object
+  // MODIFIES: LocationData.object, player.held_object, ws.calculated_reward
+  inline void do_counter_pot_interaction(Engine &ctx, PlayerState &player, int iternum)
+  {
+    if (player.interaction_index == iternum) {
+      WorldState &ws = ctx.singleton<WorldState>();
 
       int32_t pos = player.position;
       int32_t o = player.orientation;
-
+    
       int32_t i_pos = move_in_direction(pos, o, ws.width);
+      TerrainT terrain_type = ctx.get<LocationData>(ctx.data().locations[i_pos]).terrain;
 
-      LocationData &dat = ctx.get<LocationData>(ctx.data().locations[i_pos]);
-      TerrainT terrain_type = dat.terrain;
-            
       Object &soup = ctx.get<LocationData>(ctx.data().locations[i_pos]).object;
 
       if (terrain_type == TerrainT::COUNTER) {
 	if (player.has_object() && soup.name == ObjectT::NONE) {
 	  soup = player.remove_object();
-	  if (soup.name == ObjectT::DISH) {
-	    ws.num_dishes_out++;
-	  }
 	} else if (!player.has_object() && soup.name != ObjectT::NONE) {
-	  if (soup.name == ObjectT::DISH) {
-	    ws.num_dishes_out--;
-	  }
 	  player.set_object(soup);
 	  soup = { .name = ObjectT::NONE };
-	}
-      } else if (terrain_type == TerrainT::ONION_SOURCE) {
-	if (player.held_object.name == ObjectT::NONE) {
-	  player.held_object = { .name = ObjectT::ONION };
-	}
-      } else if (terrain_type == TerrainT::TOMATO_SOURCE) {
-	if (player.held_object.name == ObjectT::NONE) {
-	  player.held_object = { .name = ObjectT::TOMATO };
-	}
-      } else if (terrain_type == TerrainT::DISH_SOURCE) {
-	if (player.held_object.name == ObjectT::NONE) {
-	  if (ws.num_dishes_out == 0 && is_dish_pickup_useful(ctx, pot_states)) {
-	    rew += ws.dish_pickup_rew;
-	  }
-	  player.held_object = { .name = ObjectT::DISH };
 	}
       } else if (terrain_type == TerrainT::POT) {
-	if (player.get_object().name == ObjectT::DISH && soup_ready_at_location(ws, soup)) {
-	  player.set_object(soup);
-	  soup = { .name = ObjectT::NONE };
-	  rew += ws.soup_pickup_rew;
-	} else if (player.get_object().name == ObjectT::ONION || player.get_object().name == ObjectT::TOMATO) {
-	  if (soup.name == ObjectT::NONE) {
-	    soup = { .name = ObjectT::SOUP };
-	  }
-
-	  if (!(soup.cooking_tick >= 0 || soup.num_ingredients() == MAX_NUM_INGREDIENTS)) {
-	    Object obj = player.remove_object();
-	    if (obj.name == ObjectT::ONION) {
-	      soup.num_onions++;
-	    } else {
-	      soup.num_tomatoes++;
-	    }
-	    rew += ws.placement_in_pot_rew;
-	  }
-
-	  if (soup_to_be_cooked_at_location(ws, soup) && soup.num_ingredients() == MAX_NUM_INGREDIENTS) {
+	if (!player.has_object()) {
+	  // order doesn't matter if soup_to_be_cooked_at_location
+	  if (soup_to_be_cooked_at_location(ws, soup)) {
 	    soup.cooking_tick = 0;
 	  }
-	}
-	// }
-      } else if (terrain_type == TerrainT::SERVING) {
-	if (player.has_object()) {
-	  Object obj = player.get_object();
-	  if (obj.name == ObjectT::SOUP) {
-	    rew += deliver_soup(ws, player, obj);
+	} else {
+	  if (player.get_object().name == ObjectT::DISH && soup_ready_at_location(ws, soup)) {
+	    // order matters, only agent with lowest index can take soup
+	    player.set_object(soup);
+	    soup = { .name = ObjectT::NONE };
+	    ws.calculated_reward.fetch_add_relaxed(ws.soup_pickup_rew);
+	  } else if (player.get_object().name == ObjectT::ONION || player.get_object().name == ObjectT::TOMATO) {
+	    // order matters, only some agents can actually add to pot
+	    if (soup.name == ObjectT::NONE) {
+	      soup = { .name = ObjectT::SOUP };
+	    }
+
+	    // Object &soup = soup;
+	    if (!(soup.cooking_tick >= 0 || soup.num_ingredients() == MAX_NUM_INGREDIENTS)) {
+	      Object obj = player.remove_object();
+	      if (obj.name == ObjectT::ONION) {
+		soup.num_onions++;
+	      } else {
+		soup.num_tomatoes++;
+	      }
+	      ws.calculated_reward.fetch_add_relaxed(ws.placement_in_pot_rew);
+	    }
 	  }
 	}
       }
-
     }
-    ws.calculated_reward.store_relaxed(rew);
   }
+
+  inline void do_counter_pot_int0(Engine &ctx, PlayerState &player)
+  {
+    do_counter_pot_interaction(ctx, player, 0);
+  }
+
+  inline void do_counter_pot_int1(Engine &ctx, PlayerState &player)
+  {
+    do_counter_pot_interaction(ctx, player, 1);
+  }
+
+  inline void do_counter_pot_int2(Engine &ctx, PlayerState &player)
+  {
+    do_counter_pot_interaction(ctx, player, 2);
+  }
+
+  inline void do_counter_pot_int3(Engine &ctx, PlayerState &player)
+  {
+    do_counter_pot_interaction(ctx, player, 3);
+  }
+
 
   // REQUIRES: original player position, orientation
   // MODIFIES: proposed position, orientation, LocationData future_player
@@ -325,9 +398,16 @@ namespace Simplecooked {
   // REQUIRES: proposed_position, unmodified position
   // MODIFIES: current_player and future_player of LocationData
   inline void _unset_loc_info(Engine &ctx, PlayerState &ps, AgentID &id)
-  {        
+  {
+    // WorldState &ws = ctx.singleton<WorldState>();
+        
     ctx.get<LocationData>(ctx.data().locations[ps.position]).current_player = -1;
     ctx.get<LocationData>(ctx.data().locations[ps.proposed_position]).future_player.store_relaxed(-1);
+
+    // update relevant portions of obs
+    // LocationObservation &obs = ctx.get<LocationObservation>(ctx.data().locations[ps.position]);
+    // obs.x[id.id] = 0;
+    // obs.x[ws.num_players + 4 * id.id + ps.orientation] = 0;
     ctx.get<LocationData>(ctx.data().locations[ps.position]).past_player = id.id;
     ctx.get<LocationData>(ctx.data().locations[ps.position]).past_orientation = ps.orientation;
   }
@@ -363,7 +443,6 @@ namespace Simplecooked {
     ws.should_update_pos.store_relaxed(true);
     if (ctx.singleton<WorldReset>().resetNow) {
       ws.timestep = 0;
-      ws.num_dishes_out = 0;
     }
   }
 
@@ -419,7 +498,13 @@ namespace Simplecooked {
   void Sim::setupTasks(TaskGraphBuilder &builder, const Config &)
   {
     // Handle "Interactions"
-    auto pre_interact_sys = builder.addToGraph<ParallelForNode<Engine, resolve_interacts, WorldState>>({});
+    auto pre_interact_sys = builder.addToGraph<ParallelForNode<Engine, pre_resolve_interacts, WorldState>>({});
+    auto resolve_interact_sys = builder.addToGraph<ParallelForNode<Engine, resolve_interacts, PlayerState, AgentID, Action>>({pre_interact_sys});
+    auto interact_time_sys = builder.addToGraph<ParallelForNode<Engine, setup_interact_time, PlayerState, AgentID, Action>>({resolve_interact_sys});
+    auto counter_pot_sys0 = builder.addToGraph<ParallelForNode<Engine, do_counter_pot_int0, PlayerState>>({interact_time_sys});
+    auto counter_pot_sys1 = builder.addToGraph<ParallelForNode<Engine, do_counter_pot_int1, PlayerState>>({counter_pot_sys0});
+    auto counter_pot_sys2 = builder.addToGraph<ParallelForNode<Engine, do_counter_pot_int2, PlayerState>>({counter_pot_sys1});
+    auto counter_pot_sys3 = builder.addToGraph<ParallelForNode<Engine, do_counter_pot_int3, PlayerState>>({counter_pot_sys2});
 
     // Calculate next movement
     auto move_sys = builder.addToGraph<ParallelForNode<Engine, _move_if_direction, PlayerState, Action, AgentID>>({});
@@ -427,10 +512,10 @@ namespace Simplecooked {
     auto unset_loc_info = builder.addToGraph<ParallelForNode<Engine, _unset_loc_info, PlayerState, AgentID>>({check_collision_sys});
 
     // Modify position (need to do after all interactions are done)
-    auto collision_sys = builder.addToGraph<ParallelForNode<Engine, _handle_collisions, PlayerState, AgentID>>({unset_loc_info, pre_interact_sys});
+    auto collision_sys = builder.addToGraph<ParallelForNode<Engine, _handle_collisions, PlayerState, AgentID>>({unset_loc_info, counter_pot_sys3});
 
     // Step time of cooking pots (does not rely on player locations)
-    auto env_step_sys = builder.addToGraph<ParallelForNode<Engine, step_pot_effects, PotInfo>>({pre_interact_sys});
+    auto env_step_sys = builder.addToGraph<ParallelForNode<Engine, step_pot_effects, PotInfo>>({counter_pot_sys3});    
 
     // Should terminate in next timestep? (don't need to do whole step to make judgement)
     auto terminate_sys = builder.addToGraph<ParallelForNode<Engine, check_reset_system, WorldState>>({});
@@ -497,7 +582,6 @@ namespace Simplecooked {
       }
     }
     ws.num_players = cfg.num_players;
-    ws.num_pots = num_pots;
 
     pots = (Entity *)rawAlloc(num_pots * sizeof(Entity));
     int pot_i = 0;
@@ -520,7 +604,6 @@ namespace Simplecooked {
     ws.dish_pickup_rew = cfg.dish_pickup_rew;
     ws.soup_pickup_rew = cfg.soup_pickup_rew;
     ws.calculated_reward.store_release(0);
-    ws.num_dishes_out = 0;
 
     
     // Set Everything Else
@@ -552,7 +635,7 @@ namespace Simplecooked {
 	ctx.get<LocationXID>(locationXplayers[lxp_id]).id = lxp_id;
 	LocationXObservation& obs = ctx.get<LocationXObservation>(locationXplayers[lxp_id]);
                 
-	for (int j = 0; j < 5 * cfg.num_players + 10; j++) {
+	for (int j = 0; j < 5 * cfg.num_players + 16; j++) {
 	  obs.x[j] = 0;
 	}
 
