@@ -84,14 +84,14 @@ namespace Simplecooked {
 
     if (obj.name == ObjectT::SOUP) {
       if (dat.terrain == TerrainT::POT) {
-	obs.x[shift + 5] = obj.num_onions;
-	if (obj.cooking_tick < 0) {
-	  obs.x[shift + 6] = 0;
-	} else {
-	  obs.x[shift + 6] = obj.cooking_tick;
-	}
-      } else {
-	obs.x[shift + 7] = 1;
+        obs.x[shift + 5] = obj.num_onions;
+        if (obj.cooking_tick < 0) {
+          obs.x[shift + 6] = 0;
+        } else {
+          obs.x[shift + 6] = obj.cooking_tick;
+        }
+            } else {
+        obs.x[shift + 7] = 1;
       }
     } else if (obj.name == ObjectT::DISH) {
       obs.x[shift + 8] = 1;
@@ -102,11 +102,11 @@ namespace Simplecooked {
     if (dat.past_player != -1) {
       int32_t relative_player;
       if (dat.past_player == current_player) {
-	relative_player = 0;
+          relative_player = 0;
       } else if (dat.past_player < current_player) {
-	relative_player = dat.past_player + 1;
+          relative_player = dat.past_player + 1;
       } else {
-	relative_player = dat.past_player;
+        relative_player = dat.past_player;
       }
 
       obs.x[relative_player] = 0;
@@ -117,11 +117,11 @@ namespace Simplecooked {
       int other_player = dat.current_player;
       int i;
       if (other_player == current_player) {
-	i = 0;
+        i = 0;
       } else if (other_player < current_player) {
-	i = other_player + 1;
+        i = other_player + 1;
       } else {
-	i = other_player;
+        i = other_player;
       }
       PlayerState &ps = ctx.get<PlayerState>(ctx.data().agents[other_player]);
 
@@ -129,14 +129,14 @@ namespace Simplecooked {
       obs.x[ws.num_players + 4 * i + ps.orientation] = 1;
 
       if (ps.has_object()) {
-	Object &obj2 = ps.get_object();
-	if (obj2.name == ObjectT::SOUP) {
-	  obs.x[shift + 7] = 1;
-	} else if (obj2.name == ObjectT::DISH) {
-	  obs.x[shift + 8] = 1;
-	} else if (obj2.name == ObjectT::ONION) {
-	  obs.x[shift + 9] = 1;
-	}
+        Object &obj2 = ps.get_object();
+        if (obj2.name == ObjectT::SOUP) {
+          obs.x[shift + 7] = 1;
+        } else if (obj2.name == ObjectT::DISH) {
+          obs.x[shift + 8] = 1;
+        } else if (obj2.name == ObjectT::ONION) {
+          obs.x[shift + 9] = 1;
+        }
       }
     }
   }

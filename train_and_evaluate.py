@@ -18,7 +18,7 @@ import random
 args = get_config().parse_args("")
 
 # TODO：10000000 for 1 RTX 3090,可以尝试开的更大
-args.num_env_steps = 10000000 
+args.num_env_steps = 10000000
 args.episode_length = 400
 args.env_name = "overcooked"
 args.seed = 1
@@ -48,6 +48,7 @@ args.hanabi_name = args.over_layout if args.env_name == 'overcooked' else args.e
 run_dir = (
         "results/"
         + args.hanabi_name
+        + "/"
         + (args.run_dir)
         + "/"
         + str(args.seed)

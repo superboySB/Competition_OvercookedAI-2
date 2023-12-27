@@ -312,14 +312,14 @@ class MainPlayer:
         """Save policy's actor and critic networks."""
         print("SAVED TO", self.save_dir)
         policy_actor = self.trainer.policy.actor
-        torch.save(policy_actor.state_dict(), str(self.save_dir) + "/actor.pt")
+        torch.save(policy_actor.state_dict(), str(self.save_dir) + "/actor.pth")
         policy_critic = self.trainer.policy.critic
-        torch.save(policy_critic.state_dict(), str(self.save_dir) + "/critic.pt")
+        torch.save(policy_critic.state_dict(), str(self.save_dir) + "/critic.pth")
 
     def restore(self):
         """Restore policy's networks from a saved model."""
-        policy_actor_state_dict = torch.load(str(self.model_dir) + '/actor.pt')
+        policy_actor_state_dict = torch.load(str(self.model_dir) + '/actor.pth')
         self.policy.actor.load_state_dict(policy_actor_state_dict)
         if not self.all_args.use_render:
-            policy_critic_state_dict = torch.load(str(self.model_dir) + '/critic.pt')
+            policy_critic_state_dict = torch.load(str(self.model_dir) + '/critic.pth')
             self.policy.critic.load_state_dict(policy_critic_state_dict)

@@ -174,12 +174,14 @@ if __name__ == "__main__":
     render_mode = True
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--my_ai", default="random", help="random")
-    parser.add_argument("--opponent", default="random", help="random")
+    # parser.add_argument("--my_ai", default="random", help="random")
+    # parser.add_argument("--opponent", default="random", help="random")
+    parser.add_argument("--my_ai", default="selfplay")
+    parser.add_argument("--opponent", default="selfplay")
     args = parser.parse_args()
 
     # policy_list = ["random"] * len(game.agent_nums)
-    policy_list = [args.opponent, args.my_ai] #["random"] * len(game.agent_nums), here we control agent 2 (green agent)
+    policy_list = [args.opponent, args.my_ai] # ["random"] * len(game.agent_nums), here we control agent 2 (green agent)
 
     multi_part_agent_ids, actions_space = get_players_and_action_space_list(game)
 

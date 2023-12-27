@@ -9,8 +9,6 @@ from .vectorobservation import VectorObservation
 
 from overcooked_ai_py.utils import load_dict_from_file
 from overcooked_ai_py.mdp.actions import Action
-from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld
-from overcooked_ai_py.mdp.overcooked_env import OvercookedEnv
 
 import build.madrona_simplecooked_example_python as overcooked_python
 
