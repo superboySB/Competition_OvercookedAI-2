@@ -41,7 +41,7 @@ np.random.seed(args.seed)
 device = 'cuda' if torch.cuda.is_available() and args.cuda else 'cpu'
 print(device)
 
-envs = generate_env(args.env_name, args.n_rollout_threads, args.over_layout, use_env_cpu=(device=='cpu'), use_baseline=args.use_baseline)
+envs = generate_env(args.env_name, args.n_rollout_threads, args.over_layout, use_env_cpu=(device=='cpu'))
 
 args.hanabi_name = args.over_layout if args.env_name == 'overcooked' else args.env_name
 

@@ -31,7 +31,25 @@ python run_log.py
 ```sh
 python train_and_evaluate.py
 ```
+关于比赛的候选方法，以及更多学术前沿的方法可以尝试跑这里的脚本，然后类似`agent/trial`的做法，打包成比赛模型提交
+```sh
+cd scripts
 
+# 方法1
+./train_sp.sh
+
+# 方法2
+./train_adap.sh
+./adap_cbr.sh
+
+# 方法3
+./train_xp.sh
+./xp_cbr.sh
+
+# 方法4
+./train_mp.sh
+./mp_cbr.sh
+```
 
 ### 目前计划 1228
 1. 看看目前训练脚本的超参数是不是还能对照overcooked比较合理的论文，进一步调一调。由于训练非常快（分钟级），所以直接log都打印在本地了，训完直接就测，所以没有接wandb和tensorboard，必要的时候也可以尝试接一下

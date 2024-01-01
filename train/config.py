@@ -162,8 +162,7 @@ def get_config():
 
     parser.add_argument("--experiment_name", type=str, default="check", help="an identifier to distinguish different experiment.")
     parser.add_argument("--seed", type=int, default=1, help="Random seed for numpy/torch")
-    parser.add_argument("--cuda", action='store_true', default=False, help="by default False, will use GPU to train; or else will use CPU;")
-    parser.add_argument("--use_baseline", action='store_true', default=False, help="by default False, will use original python environment; or else will use madrona;")
+    parser.add_argument("--cuda", action='store_true', default=False, help="by default True, will use GPU to train; or else will use CPU;")
     parser.add_argument("--cuda_deterministic",
                         action='store_false', default=True, help="by default, make sure random seed effective. if set, bypass such function.")
     parser.add_argument("--n_training_threads", type=int,
@@ -285,4 +284,33 @@ def get_config():
     # pretrained parameters
     parser.add_argument("--model_dir", type=str, default=None, help="by default None. set the path to pretrained model.")
 
+
+
+    # hanabi parameters
+    parser.add_argument("--han_colors", type=int, default=2, help="Number of Hanabi Colors")
+    parser.add_argument("--han_ranks", type=int, default=5, help="Number of Hanabi Ranks")
+    parser.add_argument("--han_hand", type=int, default=2, help="Size of Hanabi Hand")
+    parser.add_argument("--han_info", type=int, default=3, help="Number of Hanabi Info Tokens")
+    parser.add_argument("--han_life", type=int, default=1, help="Number of Hanabi Life Tokens")
+
+    parser.add_argument("--over_layout", type=str, default="simple", help="Layout to use for Overcooked")
+
+    parser.add_argument("--loss_type", type=str, default=None, help="Type of additional loss")
+    parser.add_argument("--loss_param", type=float, default=0.2, help="Parameter of Loss")
+
+    parser.add_argument("--pop_size", type=int, default=3, help="Size of Population to Train")
+
+    parser.add_argument("--temperature", type=float, default=0.01, help="Temperature for weights if using averages")
+    parser.add_argument("--xp_weight", type=float, default=1, help="Parameter of Cross-Play Weight")
+    parser.add_argument("--mp_weight", type=float, default=0.1, help="Parameter of Mixed-Play Weight")
+    parser.add_argument("--mix_prob", type=float, default=0.5, help="Parameter of Mixed-Play Probability")
+    parser.add_argument("--env_length", type=int, default=3, help="Max length of phase 1 mix-play")
+
+    parser.add_argument("--use_average", action='store_true', default=False, help="Use average instead of max for population training")
+    parser.add_argument("--simul_env", action='store_true', default=False, help="The environment has simultaneous actions (instead of turn-based)")
+
+    parser.add_argument("--run_dir", type=str, default='standard', help="Name of run directory")
+    parser.add_argument("--restored", type=int, default=0, help="Agent to continue training from")
+
+    parser.add_argument("--seed_skip", type=float, default=100, help="Number to increment seed for next trained convention")
     return parser
