@@ -7,7 +7,12 @@ from XD.serial import run_serial
 import torch
 
 args = get_config().parse_args()
-device = 'cuda' if torch.cuda.is_available() and args.cuda else 'cpu'
+
+if torch.cuda.is_available() and args.cuda:
+    device = 'cuda'
+else:
+    device = 'cpu'
+print(device)
 
 set_seed(args.seed, args.cuda_deterministic)
 print(args)
@@ -18,7 +23,7 @@ env_generator = lambda x : generate_env(args.env_name, x, args.over_layout, use_
 args.hanabi_name = args.over_layout if args.env_name == 'overcooked' else args.env_name
 
 run_dir = (
-    os.path.dirname(os.path.abspath(__file__))
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     + "/results/"
     + args.hanabi_name
     + "/"

@@ -265,15 +265,6 @@ class DecentralizedAgent(VectorAgent):
     def update(self, rewards, dones):
         pass
 
-class TFJSAgent(VectorAgent):
-    def __init__(self, read_file: str, player_id: int):
-        self.model = torch.load(read_file).cuda()
-
-    def get_action(self, obs, record=True):
-        return torch.distributions.Categorical(self.model(obs.obs.to(torch.float))).sample().unsqueeze(-1).cpu()
-
-    def update(self, rewards, dones):
-        pass
 
 # class DecentralizedAgent(Agent):
 #     def __init__(self, policy, critic=None):

@@ -741,25 +741,25 @@ class XDPlayer(MainPlayer):
         print(os.path.exists(self.save_dir))
         os.makedirs(self.save_dir, exist_ok=True)
         policy_actor = self.trainer.policy.actor
-        torch.save(policy_actor.state_dict(), str(self.save_dir) + "/actor.pt")
+        torch.save(policy_actor.state_dict(), str(self.save_dir) + "/actor.pth")
         print("SAVED TO", self.save_dir)
         policy_critic_sp = self.trainer.policy.sp_critic
-        torch.save(policy_critic_sp.state_dict(), str(self.save_dir) + "/sp_critic.pt")
+        torch.save(policy_critic_sp.state_dict(), str(self.save_dir) + "/sp_critic.pth")
         for i in range(len(self.agent_set)):
             policy_critic_0 = self.trainer.policy.xp_critic0[i]
             torch.save(
                 policy_critic_0.state_dict(),
-                str(self.save_dir) + "/xp_critic0_" + str(i) + ".pt",
+                str(self.save_dir) + "/xp_critic0_" + str(i) + ".pth",
             )
             policy_critic_1 = self.trainer.policy.xp_critic1[i]
             torch.save(
                 policy_critic_1.state_dict(),
-                str(self.save_dir) + "/xp_critic1_" + str(i) + ".pt",
+                str(self.save_dir) + "/xp_critic1_" + str(i) + ".pth",
             )
 
     def restore(self):
         """Restore policy's networks from a saved model."""
-        policy_actor_state_dict = torch.load(str(self.model_dir) + "/actor.pt")
+        policy_actor_state_dict = torch.load(str(self.model_dir) + "/actor.pth")
         self.policy.actor.load_state_dict(policy_actor_state_dict)
         if not self.all_args.use_render:
             policy_critic_sp_state_dict = torch.load(
@@ -769,11 +769,11 @@ class XDPlayer(MainPlayer):
 
             for i in range(len(self.agent_set)):
                 xp_crit_0 = torch.load(
-                    str(self.model_dir) + "/xp_critic0_" + str(i) + ".pt"
+                    str(self.model_dir) + "/xp_critic0_" + str(i) + ".pth"
                 )
                 self.policy.xp_critic0[i].load_state_dict(xp_crit_0)
 
                 xp_crit_1 = torch.load(
-                    str(self.model_dir) + "/xp_critic1_" + str(i) + ".pt"
+                    str(self.model_dir) + "/xp_critic1_" + str(i) + ".pth"
                 )
                 self.policy.xp_critic1[i].load_state_dict(xp_crit_1)

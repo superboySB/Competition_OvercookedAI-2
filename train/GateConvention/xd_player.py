@@ -422,4 +422,4 @@ class XDPlayer(MainPlayer):
     def save(self):
         print("SAVED TO", self.save_dir)
         policy_actor = self.gate
-        torch.save(policy_actor.state_dict(), str(self.save_dir) + "/gate.pt")
+        torch.save(policy_actor.state_dict(), str(self.save_dir) + "/gate.pth")

@@ -40,15 +40,15 @@ cd scripts
 
 # 方法2
 ./train_adap.sh
-./adap_cbr.sh
+./cbr_adap.sh
 
 # 方法3
 ./train_xp.sh
-./xp_cbr.sh
+./cbr_xp.sh
 
 # 方法4
 ./train_mp.sh
-./mp_cbr.sh
+./cbr_mp.sh
 ```
 
 ### 目前计划 1228

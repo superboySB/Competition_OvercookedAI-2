@@ -1,7 +1,7 @@
 #!/bin/bash
 # 设置变量
 episode_length=400
-num_env_steps=10000000
+num_env_steps=5000000
 n_rollout_threads=128
 over_layouts=("cramped_room_tomato" "forced_coordination_tomato" "soup_coordination")
 
