@@ -4,8 +4,7 @@
 num_env_steps=100000  # 比赛：2000000, 测试：100000
 episode_length=400
 pop_size=5 
-# over_layouts=("cramped_room_tomato" "forced_coordination_tomato" "soup_coordination")
-over_layouts=("soup_coordination")
+over_layouts=("cramped_room_tomato" "forced_coordination_tomato" "soup_coordination")
 
 
 # 外部循环遍历 over_layouts 数组

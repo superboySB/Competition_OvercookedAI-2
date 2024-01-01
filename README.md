@@ -38,11 +38,11 @@ cd scripts
 # 方法1
 ./train_sp.sh
 
-# 方法2
+# 方法2 (未加入，可模仿方法4加入)
 ./train_adap.sh
 ./cbr_adap.sh
 
-# 方法3
+# 方法3 (未加入，可模仿方法4加入)
 ./train_xp.sh
 ./cbr_xp.sh
 
