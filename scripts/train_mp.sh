@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 设置变量
-num_env_steps=100000  # 比赛：2000000, 测试：100000
+num_env_steps=2000000  # 比赛：2000000, 测试：100000
 episode_length=400
 pop_size=5 
 over_layouts=("cramped_room_tomato" "forced_coordination_tomato" "soup_coordination")

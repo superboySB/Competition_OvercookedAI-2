@@ -42,11 +42,11 @@ cd scripts
 ./train_adap.sh
 ./cbr_adap.sh
 
-# 方法3 (未加入，可模仿方法4加入)
+# 方法3
 ./train_xp.sh
 ./cbr_xp.sh
 
-# 方法4
+# 方法4 (当前主要尝试方法, CoMeDi, Stanford 2023，依次运行两个脚本) 
 ./train_mp.sh
 ./cbr_mp.sh
 ```
