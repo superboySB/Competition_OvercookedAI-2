@@ -3,20 +3,22 @@
 # 设置变量
 num_env_steps=2000000  # 比赛：2000000, 测试：100000
 episode_length=400
-pop_size=5
+pop_size=8
+cuda_flag=""
+n_rollout_threads=256
 over_layouts=("cramped_room_tomato" "forced_coordination_tomato" "soup_coordination")
 
 # 外部循环遍历 over_layouts 数组
 for layout in "${over_layouts[@]}"
 do
     # 判断是否使用 CUDA
-    if [ "$layout" == "soup_coordination" ]; then
-        cuda_flag=""
-        n_rollout_threads=128
-    else
-        cuda_flag="--cuda"
-        n_rollout_threads=32
-    fi
+    # if [ "$layout" == "soup_coordination" ]; then
+    #     cuda_flag=""
+    #     n_rollout_threads=128
+    # else
+    #     cuda_flag="--cuda"
+    #     n_rollout_threads=32
+    # fi
 
     python ../train/best_response_trainer.py --num_env_steps $num_env_steps \
                                     --episode_length $episode_length \

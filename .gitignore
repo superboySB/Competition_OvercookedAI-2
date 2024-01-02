@@ -13,7 +13,6 @@ build
 wandb
 .vscode
 api
-logs
 .nfs*
 *.so
 *.out
@@ -32,9 +31,3 @@ pretrained_models
 *.DS_Store
 .ipynb_checkpoints/
 
-
-train/balance/
-train/random1/
-train/simple/
-train/unident/
-train/unident_s/
