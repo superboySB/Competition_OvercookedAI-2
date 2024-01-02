@@ -98,7 +98,7 @@ env_generator = lambda x : generate_env(args.env_name, x, args.over_layout, use_
 
 args.hanabi_name = args.over_layout if args.env_name == 'overcooked' else args.env_name
 
-if args.loss_type:
+if args.loss_type:  # false
     run_dir = (
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             + "/results/"

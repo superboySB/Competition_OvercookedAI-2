@@ -12,7 +12,7 @@ do
     # 判断是否使用 CUDA
     if [ "$layout" == "soup_coordination" ]; then
         cuda_flag=""
-        n_rollout_threads=64
+        n_rollout_threads=128
     else
         cuda_flag="--cuda"
         n_rollout_threads=32
