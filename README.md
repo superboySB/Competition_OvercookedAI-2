@@ -50,10 +50,11 @@ cd scripts
 ./train_mp.sh
 ./cbr_mp.sh
 ```
+目前train_mp用时大概xxx小时，cbr_mp用时大概xx小时
 
-### 目前计划 1228
-1. 看看目前训练脚本的超参数是不是还能对照overcooked比较合理的论文，进一步调一调。由于训练非常快（分钟级），所以直接log都打印在本地了，训完直接就测，所以没有接wandb和tensorboard，必要的时候也可以尝试接一下
-2. 现在只有self play和CNN，还没有加RNN，并且convention角度也没有结合翰澄推荐的[同组最新论文](http://iliad.stanford.edu/Diverse-Conventions/)，这个可能要先看看它又进一步魔改的[overcooked源码的MDP部分](https://github.com/Stanford-ILIAD/Diverse-Conventions/blob/master/src/overcooked2_env/sim.cpp)是否还兼容，至于算法应该大概率兼容，因为还是同一个codebase
+### 目前计划 0103
+1. 已经从convention角度接入了翰澄推荐的[同组最新论文](http://iliad.stanford.edu/Diverse-Conventions/)，但还是要仔细去看魔改的[overcooked源码的MDP部分](https://github.com/Stanford-ILIAD/Diverse-Conventions/blob/master/src/overcooked2_env/sim.cpp)是否还是同一个环境，因为目前出现了本地测试越来越高，但在线匹配效果不佳的问题。
+2. 目前考虑完整训练pipeline之后的用时应该会是一天左右了，应该仔细研究算法背后的逻辑原理，当然我觉得主要的问题应该还是在环境上，毕竟有队伍写的是决策树，但我们在没有基础的情况下，还是努力用zsc的AI模型解决问题，达到对前沿的有效尝试就好，just for fun
 
 ## 以下是比赛官方介绍
 

@@ -1,11 +1,17 @@
 #!/bin/bash
 
-# 定义变量
-num_env_steps=2000000 # 比赛：2000000, 测试：100000
+# 设置变量
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
+export MADRONA_MWGPU_KERNEL_CACHE=/tmp/overcookedcache
+export TF_CPP_MIN_LOG_LEVEL=2
+export TF_ENABLE_ONEDNN_OPTS=0
+export CUDA_VISIBLE_DEVICES=0
+
+num_env_steps=2000000  # 比赛：2000000, 测试：100000
 episode_length=400
 pop_size=8
 cuda_flag=""
-n_rollout_threads=256
+n_rollout_threads=16
 over_layouts=("cramped_room_tomato" "forced_coordination_tomato" "soup_coordination")
 
 # 内部循环遍历 over_layouts 数组
@@ -14,7 +20,7 @@ do
     # 判断是否使用 CUDA
     # if [ "$layout" == "soup_coordination" ]; then
     #     cuda_flag=""
-    #     n_rollout_threads=128
+    #     n_rollout_threads=16
     # else
     #     cuda_flag="--cuda"
     #     n_rollout_threads=32
