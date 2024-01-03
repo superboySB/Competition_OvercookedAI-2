@@ -19,7 +19,7 @@ cd /workspace && git clone https://github.com/superboySB/Competition_OvercookedA
 
 mkdir build && cd build && cmake -D CUDAToolkit_ROOT=/usr/local/cuda .. && make -j8
 
-cd .. && pip install -e . && pip install -e overcooked_ai
+cd .. && pip install -e .
 ```
 
 ### 基本使用方法
