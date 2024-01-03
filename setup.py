@@ -13,11 +13,9 @@ setup(name='madronarlenvs',
           'torch',
           'numpy',
           'tqdm',
-          # 'stable-baselines3',
+          'overcooked-ai==1.1.0',
           'gym==0.23.1',
           'tensorboard',
           'packaging'
-        #   'hanabi_learning_environment',
-
       ],
       )
