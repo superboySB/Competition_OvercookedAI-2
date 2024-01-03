@@ -1,6 +1,6 @@
 # -*- coding:utf-8  -*-
 import os
-os.environ["SDL_VIDEODRIVER"] = "dummy"
+# os.environ["SDL_VIDEODRIVER"] = "dummy"  # 取消注释即可运行在服务器上
 import time
 import json
 import numpy as np
@@ -176,8 +176,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # parser.add_argument("--my_ai", default="random", help="random")
     # parser.add_argument("--opponent", default="random", help="random")
-    parser.add_argument("--my_ai", default="random")
-    parser.add_argument("--opponent", default="mp0101")
+    parser.add_argument("--my_ai", default="sp0101")
+    parser.add_argument("--opponent", default="sp0102")
     args = parser.parse_args()
 
     # policy_list = ["random"] * len(game.agent_nums)

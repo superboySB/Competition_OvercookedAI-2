@@ -16,6 +16,7 @@ setup(name='madronarlenvs',
           'overcooked-ai==1.1.0',
           'gym==0.23.1',
           'tensorboard',
-          'packaging'
+          'packaging',
+          'scipy'
       ],
       )
