@@ -1,3 +1,29 @@
+
+sp0101 and sp0101
+
+
+<img src="https://github.com/superboySB/Competition_OvercookedAI-2/blob/main/imgs/replays/spsp.gif" width="360px">
+
+
+sp0101 and mp0101：
+
+
+<img src="https://github.com/superboySB/Competition_OvercookedAI-2/blob/main/imgs/replays/spmp.gif" width="360px">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 这是用JD比赛得到run_log.py，然后把戴总训练的模型sp0101替换random，两个都是sp的视频，发现做的是bonus的tomato和onion，然后每隔step后sleep了1s，发现中间确实有一个点火交互，就是放完了食物不是立刻开始计时，但是他也能学会？
 
 
