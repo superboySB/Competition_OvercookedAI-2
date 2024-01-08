@@ -4,13 +4,11 @@ import torch
 import torch.nn as nn
 
 from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld,OvercookedState
+from gym.spaces import Discrete
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--index", default=-1, type=int)
-parser.add_argument("--last_x", default=-1, type=int)
-parser.add_argument("--last_y", default=-1, type=int)
-parser.add_argument("--ll_x", default=-1, type=int)
-parser.add_argument("--ll_y", default=-1, type=int)
+parser.add_argument("--kazhu_len", default=10, type=int)
 args = parser.parse_args()
 
 game_pool = ['cramped_room_tomato','cramped_room_tomato',
@@ -85,40 +83,48 @@ for i,layout_name in enumerate(game_pool):
     policy_pool.append(policy_i)
 
 
+# 在函数外部初始化一个空列表来存储位置历史
+position_history = []
+
 def my_controller(observation, action_space, is_act_continuous=False):
+    global position_history
     if observation["new_map"]:
         args.index += 1
-        args.last_x = -1
-        args.last_y = -1
-        args.ll_x = -1
-        args.ll_y = -1
+        # 重置位置历史记录
+        position_history = []
 
     state = OvercookedState.from_dict(observation)
+    current_position = state.players[observation["controlled_player_index"]].position
+
+    # 更新位置历史
+    position_history.append(current_position)
+
+    # 保持历史记录长度为10
+    if len(position_history) > args.kazhu_len:
+        position_history.pop(0)
+
+    # 检查是否连续10步没有移动
+    not_moving = len(position_history) == args.kazhu_len and all(pos == position_history[0] for pos in position_history)
+
+    # if not_moving:
+    #     print("卡了")
+    # else:
+    #     print("没卡")
+
     obs = mdp_pool[args.index].lossless_state_encoding(state)[observation["controlled_player_index"]]
     
-    
     agent_action = []
+
     for i in range(len(action_space)):
-        kazhu = False
-        if state.players[observation["controlled_player_index"]].position[0] == args.last_x == args.ll_x \
-          and state.players[observation["controlled_player_index"]].position[1] == args.last_y == args.ll_y:
-            kazhu = True
-        
-        if kazhu:  # Random
-            action_ = sample_single_dim(action_space[i], is_act_continuous)
-        else: # selfplay policy
+        if not_moving:  # 如果连续args.kazhu_len步没有移动，在前四维动作里选一个，跳出dilemma
+            action_ = sample_single_dim(Discrete(4), is_act_continuous)
+        else:  # 正常情况下使用策略
             each = [0] * action_space[i].n
             idx = policy_pool[args.index](torch.from_numpy(obs[None, :]))
-            
             each[idx] = 1
             action_ = each
 
         agent_action.append(action_)
-    
-    args.ll_x = args.last_x
-    args.ll_y = args.last_y
-    args.last_x = state.players[observation["controlled_player_index"]].position[0]
-    args.last_y = state.players[observation["controlled_player_index"]].position[1]
 
     return agent_action
 
