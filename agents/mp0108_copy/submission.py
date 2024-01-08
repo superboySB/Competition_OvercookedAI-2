@@ -9,6 +9,8 @@ from overcooked_ai_py.mdp.overcooked_env import OvercookedEnv, DEFAULT_ENV_PARAM
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--index", default=-1, type=int)
+parser.add_argument("--last_x", default=-1, type=int)
+parser.add_argument("--last_y", default=-1, type=int)
 args = parser.parse_args()
 
 game_pool = ['cramped_room_tomato','cramped_room_tomato',
@@ -86,21 +88,33 @@ for i,layout_name in enumerate(game_pool):
 def my_controller(observation, action_space, is_act_continuous=False):
     if observation["new_map"]:
         args.index += 1
+        args.last_x = -1
+        args.last_y = -1
+
     state = OvercookedState.from_dict(observation)
     obs = mdp_pool[args.index].lossless_state_encoding(state)[observation["controlled_player_index"]]
-
+    
     agent_action = []
     for i in range(len(action_space)):
-        # Random
-        # action_ = sample_single_dim(action_space[i], is_act_continuous)
-        # ---------------------------------------------------------------
-        # selfplay policy
-        each = [0] * action_space[i].n
-        idx = policy_pool[args.index](torch.from_numpy(obs[None, :]))
-        each[idx] = 1
-        action_ = each
+        kazhu = False
+        # if state.players[observation["controlled_player_index"]].position[0] == args.last_x \
+        #   and state.players[observation["controlled_player_index"]].position[1] == args.last_y:
+        #     kazhu = True
+        
+        if kazhu:  # Random
+            action_ = sample_single_dim(action_space[i], is_act_continuous)
+        else: # selfplay policy
+            each = [0] * action_space[i].n
+            idx = policy_pool[args.index](torch.from_numpy(obs[None, :]))
+            
+            each[idx] = 1
+            action_ = each
 
         agent_action.append(action_)
+    
+    args.last_x = state.players[observation["controlled_player_index"]].position[0]
+    args.last_y = state.players[observation["controlled_player_index"]].position[1]
+
     return agent_action
 
 

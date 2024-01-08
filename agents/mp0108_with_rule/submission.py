@@ -2,15 +2,15 @@ import os
 import argparse
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld,OvercookedState
-from overcooked_ai_py.mdp.overcooked_env import OvercookedEnv, DEFAULT_ENV_PARAMS
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--index", default=-1, type=int)
 parser.add_argument("--last_x", default=-1, type=int)
 parser.add_argument("--last_y", default=-1, type=int)
+parser.add_argument("--ll_x", default=-1, type=int)
+parser.add_argument("--ll_y", default=-1, type=int)
 args = parser.parse_args()
 
 game_pool = ['cramped_room_tomato','cramped_room_tomato',
@@ -90,16 +90,19 @@ def my_controller(observation, action_space, is_act_continuous=False):
         args.index += 1
         args.last_x = -1
         args.last_y = -1
+        args.ll_x = -1
+        args.ll_y = -1
 
     state = OvercookedState.from_dict(observation)
     obs = mdp_pool[args.index].lossless_state_encoding(state)[observation["controlled_player_index"]]
     
+    
     agent_action = []
     for i in range(len(action_space)):
         kazhu = False
-        # if state.players[observation["controlled_player_index"]].position[0] == args.last_x \
-        #   and state.players[observation["controlled_player_index"]].position[1] == args.last_y:
-        #     kazhu = True
+        if state.players[observation["controlled_player_index"]].position[0] == args.last_x == args.ll_x \
+          and state.players[observation["controlled_player_index"]].position[1] == args.last_y == args.ll_y:
+            kazhu = True
         
         if kazhu:  # Random
             action_ = sample_single_dim(action_space[i], is_act_continuous)
@@ -112,6 +115,8 @@ def my_controller(observation, action_space, is_act_continuous=False):
 
         agent_action.append(action_)
     
+    args.ll_x = args.last_x
+    args.ll_y = args.last_y
     args.last_x = state.players[observation["controlled_player_index"]].position[0]
     args.last_y = state.players[observation["controlled_player_index"]].position[1]
 
