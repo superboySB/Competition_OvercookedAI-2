@@ -108,8 +108,6 @@ def my_controller(observation, action_space, is_act_continuous=False):
 
     # if not_moving:
     #     print("卡了")
-    # else:
-    #     print("没卡")
 
     obs = mdp_pool[args.index].lossless_state_encoding(state)[observation["controlled_player_index"]]
     
@@ -117,7 +115,7 @@ def my_controller(observation, action_space, is_act_continuous=False):
 
     for i in range(len(action_space)):
         if not_moving:  # 如果连续args.kazhu_len步没有移动，在前四维动作里选一个，跳出dilemma
-            action_ = sample_single_dim(Discrete(4), is_act_continuous)
+            action_ = sample_single_dim(action_space[i], is_act_continuous)
         else:  # 正常情况下使用策略
             each = [0] * action_space[i].n
             idx = policy_pool[args.index](torch.from_numpy(obs[None, :]))
@@ -135,7 +133,7 @@ def sample_single_dim(action_space_list_each, is_act_continuous):
         each = action_space_list_each.sample()
     else:
         if action_space_list_each.__class__.__name__ == "Discrete":
-            each = [0] * 6
+            each = [0] * action_space_list_each.n
             idx = action_space_list_each.sample()
             each[idx] = 1
         elif action_space_list_each.__class__.__name__ == "MultiDiscreteParticle":
