@@ -8,7 +8,7 @@ from gym.spaces import Discrete
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--index", default=-1, type=int)
-parser.add_argument("--kazhu_len", default=10, type=int)
+parser.add_argument("--kazhu_len", default=20, type=int)
 args = parser.parse_args()
 
 game_pool = ['cramped_room_tomato','cramped_room_tomato',
@@ -135,7 +135,7 @@ def sample_single_dim(action_space_list_each, is_act_continuous):
         each = action_space_list_each.sample()
     else:
         if action_space_list_each.__class__.__name__ == "Discrete":
-            each = [0] * action_space_list_each.n
+            each = [0] * 6
             idx = action_space_list_each.sample()
             each[idx] = 1
         elif action_space_list_each.__class__.__name__ == "MultiDiscreteParticle":
