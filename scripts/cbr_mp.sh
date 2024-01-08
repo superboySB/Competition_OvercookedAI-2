@@ -7,7 +7,7 @@ export TF_CPP_MIN_LOG_LEVEL=2
 export TF_ENABLE_ONEDNN_OPTS=0
 export CUDA_VISIBLE_DEVICES=0
 
-num_env_steps=2000000  # 比赛：2000000, 测试：100000
+num_env_steps=500000  # 比赛：500000, 测试：100000
 episode_length=400
 pop_size=8
 cuda_flag=""
