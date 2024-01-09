@@ -8,49 +8,57 @@ This repo provide the source code of a solution for the [RLChina Competition - G
 ## Our Solution
 
 ### 安装教程
+
 ```sh
 docker build -t zsc_image:1.0 .
 
 docker run -itd --privileged -v /tmp/.X11-unix:/tmp/.X11-unix:ro -e DISPLAY=$DISPLAY --gpus all --network=host --name=zsc zsc_image:1.0 /bin/bash
 
-conda create -n madrona python=3.10 && conda activate madrona && pip install torch numpy tensorboard 
-
 cd /workspace && git clone https://github.com/superboySB/Competition_OvercookedAI-2 && cd Competition_OvercookedAI-2 && git submodule update --init --recursive
+```
+针对ZSC跑madrona训练，需要构建`python=3.10`的环境
+```sh
+conda create -n madrona python=3.10 && conda activate madrona && pip install torch numpy tensorboard 
 
 mkdir build && cd build && cmake -D CUDAToolkit_ROOT=/usr/local/cuda .. && make -j8
 
 cd .. && pip install -e .
 ```
-
+针对single agent RL，我们跑cleanRL训练，需要构建`python=3.8`的环境
+```sh
+conda create -n cleanrl python=3.8 && conda activate cleanrl && pip install -r requirements.txt
+```
 ### 基本使用方法
-这是比赛submission的本地运行验证文件
+这是比赛submission的本地运行验证文件,可以输入两个模型，随时用来模拟比赛的对打情况
 ```sh
 python run_log.py
 ```
-训练madrona并测试，可以对比一些其它文章对这些layout的训练结果，在公测上对比
+#### ZSC
+首先载入环境
+```sh
+conda activate madrona
+```
+测试madrona的功能完整性，可以对比一些其它文章对这些layout的训练结果，在公测上做对比
 ```sh
 python train_and_evaluate.py
 ```
-关于比赛的候选方法，以及更多学术前沿的方法可以尝试跑这里的脚本，然后类似`agent/trial`的做法，打包成比赛模型提交
+关于ZSC的候选方法，以及更多学术前沿的方法可以尝试跑这里的脚本，然后类似`agent/trial`的做法，打包成比赛模型提交
 ```sh
 cd scripts
 
 # 方法1
 ./train_sp.sh
 
-# 方法2 (未加入，可模仿方法4加入)
-./train_adap.sh
-./cbr_adap.sh
-
-# 方法3
-./train_xp.sh
-./cbr_xp.sh
-
-# 方法4 (当前主要尝试方法, CoMeDi, Stanford 2023，依次运行两个脚本) 
+# 方法2 (当前主要尝试方法, CoMeDi, Stanford 2023，依次运行两个脚本) 
 ./train_mp.sh
 ./cbr_mp.sh
 ```
-目前train_mp用时大概xxx小时，cbr_mp用时大概xx小时
+#### 单智能体RL的微调
+首先载入环境
+```sh
+conda activate cleanrl
+```
+
 
 ### 目前计划 0103
 1. 已经从convention角度接入了翰澄推荐的[同组最新论文](http://iliad.stanford.edu/Diverse-Conventions/)，但还是要仔细去看魔改的[overcooked源码的MDP部分](https://github.com/Stanford-ILIAD/Diverse-Conventions/blob/master/src/overcooked2_env/sim.cpp)是否还是同一个环境，因为目前出现了本地测试越来越高，但在线匹配效果不佳的问题。
