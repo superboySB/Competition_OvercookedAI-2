@@ -1,10 +1,6 @@
 #!/bin/bash
 
 # 设置变量
-export CUBLAS_WORKSPACE_CONFIG=:4096:8
-export MADRONA_MWGPU_KERNEL_CACHE=/tmp/overcookedcache
-export TF_CPP_MIN_LOG_LEVEL=2
-export TF_ENABLE_ONEDNN_OPTS=0
 export CUDA_VISIBLE_DEVICES=0
 
 num_env_steps=500000  # 比赛：500000, 测试：100000
