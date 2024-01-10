@@ -1,6 +1,6 @@
 # -*- coding:utf-8  -*-
 import os
-# os.environ["SDL_VIDEODRIVER"] = "dummy"  # 取消注释即可运行在服务器上
+os.environ["SDL_VIDEODRIVER"] = "dummy"  # TODO:取消注释即可运行在服务器上
 import time
 import json
 import numpy as np

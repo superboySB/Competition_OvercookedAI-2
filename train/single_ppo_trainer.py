@@ -1,5 +1,6 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_ataripy
 import os
+import sys
 import random
 import time
 from dataclasses import dataclass
@@ -13,16 +14,11 @@ import tyro
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
-from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld,OvercookedState
-from overcooked_ai_py.mdp.overcooked_env import OvercookedEnv, DEFAULT_ENV_PARAMS
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
 
-from stable_baselines3.common.atari_wrappers import (  # isort:skip
-    ClipRewardEnv,
-    EpisodicLifeEnv,
-    FireResetEnv,
-    MaxAndSkipEnv,
-    NoopResetEnv,
-)
+from env.singlecooked_gym import SinglecookedAI
 
 @dataclass
 class Args:
@@ -46,7 +42,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    total_timesteps: int = 10000000
+    total_timesteps: int = 100000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
@@ -87,115 +83,115 @@ class Args:
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
 
-    # 单独添加给overcooked用的:
-    # cramped_room_tomato, forced_coordination_tomato, soup_coordination
-    layout_name:str = "cramped_room_tomato"
+    # TODO：for our task
+    # over_layouts=("cramped_room_tomato" "forced_coordination_tomato" "soup_coordination")
+    map_name = "soup_coordination"
 
 
-def make_env(env_id, idx, capture_video, run_name):
+def make_env(idx, map_name):
     def thunk():
-        if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        else:
-            env = gym.make(env_id)
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        if capture_video:
-            if idx == 0:
-                env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        env = NoopResetEnv(env, noop_max=30)
-        env = MaxAndSkipEnv(env, skip=4)
-        env = EpisodicLifeEnv(env)
-        if "FIRE" in env.unwrapped.get_action_meanings():
-            env = FireResetEnv(env)
-        env = ClipRewardEnv(env)
-        env = gym.wrappers.ResizeObservation(env, (84, 84))
-        env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
+        config = {}
+        config['seed']=idx
+        config['map_name']=map_name
+        env = SinglecookedAI(config)
         return env
 
     return thunk
 
+key_map = {
+    "base.cnn.cnn.0.weight": "base.0.weight",
+    "base.cnn.cnn.0.bias": "base.0.bias",
+    "base.cnn.cnn.3.weight": "base.3.weight",
+    "base.cnn.cnn.3.bias": "base.3.bias",
+    "base.cnn.cnn.5.weight": "base.5.weight",
+    "base.cnn.cnn.5.bias": "base.5.bias",
+    "act.action_out.linear.weight": "action_out.weight",
+    "act.action_out.linear.bias": "action_out.bias"
+}
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
-# class Actor(nn.Module):
-#     def __init__(self, input_width,input_height, input_channels):
-#         super().__init__()
-#         self.network = nn.Sequential(
-#             layer_init(nn.Conv2d(4, 32, 8, stride=4)),
-#             nn.ReLU(),
-#             layer_init(nn.Conv2d(32, 64, 4, stride=2)),
-#             nn.ReLU(),
-#             layer_init(nn.Conv2d(64, 64, 3, stride=1)),
-#             nn.ReLU(),
-#             nn.Flatten(),
-#             layer_init(nn.Linear(64 * 7 * 7, 512)),
-#             nn.ReLU(),
-#         )
-#         self.actor = layer_init(nn.Linear(64, 6), std=0.01)
-#         self.critic = layer_init(nn.Linear(64, 1), std=1)
+# 计算卷积层输出尺寸
+def conv2d_size_out(size, kernel_size = 3, stride = 1):
+    return (size - (kernel_size - 1) - 1) // stride + 1
+    
 
+class ActorNetwork(nn.Module):
+    def __init__(self, input_shape, num_actions):
+        super(ActorNetwork, self).__init__()
 
-#         conv1 = nn.Conv2d(input_channels, 32, kernel_size=(3, 3), stride=(1, 1))
+        conv_height = conv2d_size_out(input_shape[0], 3)
+        conv_width = conv2d_size_out(input_shape[1], 3)
+        linear_input_size = conv_height * conv_width * 32
 
-#         # 计算卷积层输出尺寸
-#         def conv2d_size_out(size, kernel_size = 3, stride = 1):
-#             return (size - (kernel_size - 1) - 1) // stride + 1
-
-#         conv_height = conv2d_size_out(input_height, 3)
-#         conv_width = conv2d_size_out(input_width, 3)
-#         linear_input_size = conv_height * conv_width * 32
-#         self.base = nn.Sequential(
-#             layer_init(conv1),
-#             nn.ReLU(),
-#             nn.Flatten(),
-#             nn.Linear(linear_input_size, 64),
-#             nn.ReLU(),
-#             nn.Linear(64, 64),
-#             nn.ReLU()
-#         )
-#         self.action_out = layer_init(nn.Linear(64, 6))
-
-#     def forward(self, x: torch.Tensor):
-#         hidden = self.network(x / 255.0)
-#         logits = self.actor(hidden)
-#         probs = Categorical(logits=logits)
-#         if action is None:
-#             action = probs.sample()
-#         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
-
-
-class Agent(nn.Module):
-    def __init__(self, envs):
-        super().__init__()
-        self.network = nn.Sequential(
-            layer_init(nn.Conv2d(4, 32, 8, stride=4)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+        self.base = nn.Sequential(
+            layer_init(nn.Conv2d(input_shape[-1], 32, kernel_size=(3, 3), stride=1)),
             nn.ReLU(),
             nn.Flatten(),
-            layer_init(nn.Linear(64 * 7 * 7, 512)),
+            layer_init(nn.Linear(linear_input_size, 64)),
             nn.ReLU(),
+            layer_init(nn.Linear(64, 64)),
+            nn.ReLU()
         )
-        self.actor = layer_init(nn.Linear(512, envs.single_action_space.n), std=0.01)
-        self.critic = layer_init(nn.Linear(512, 1), std=1)
+        self.action_out = layer_init(nn.Linear(64, num_actions), std=0.01)
+
+    def forward(self, x: torch.Tensor):
+        x = x.to(dtype=torch.float)
+        x = x.permute((0, 3, 1, 2))  # 调整x的形状以适应网络
+        return self.action_out(self.base(x))
+
+class CriticNetwork(nn.Module):
+    def __init__(self, input_shape):
+        super(CriticNetwork, self).__init__()
+        
+        conv_height = conv2d_size_out(input_shape[0], 3)
+        conv_width = conv2d_size_out(input_shape[1], 3)
+        linear_input_size = conv_height * conv_width * 32
+        
+        self.base = nn.Sequential(
+            layer_init(nn.Conv2d(input_shape[-1], 32, kernel_size=(3, 3), stride=1)),
+            nn.ReLU(),
+            nn.Flatten(),
+            layer_init(nn.Linear(linear_input_size, 64)),
+            nn.ReLU(),
+            layer_init(nn.Linear(64, 64)),
+            nn.ReLU()
+        )
+
+        self.critic_out = layer_init(nn.Linear(64, 1), std=1)
+
+    def forward(self, x):
+        x = x.to(dtype=torch.float)
+        x = x.permute((0, 3, 1, 2))  # 调整x的形状以适应网络
+        return self.critic_out(self.base(x))
+
+class Agent(nn.Module):
+    def __init__(self, envs, actor_weights_path=None):
+        super().__init__()
+        num_actions = envs.single_action_space.n
+        input_shape = envs.single_observation_space.shape
+        self.actor_network = ActorNetwork(input_shape, num_actions)
+        # 加载预训练的 Actor 网络权重
+        if actor_weights_path is not None:
+            policy_actor_state_dict = torch.load(actor_weights_path)
+            new_state_dict = {key_map.get(k, k): v for k, v in policy_actor_state_dict.items()}
+            self.actor_network.load_state_dict(new_state_dict)
+        
+        self.critic_network = CriticNetwork(input_shape)
 
     def get_value(self, x):
-        return self.critic(self.network(x / 255.0))
-
+        return self.critic_network(x)
+    
     def get_action_and_value(self, x, action=None):
-        hidden = self.network(x / 255.0)
-        logits = self.actor(hidden)
+        logits = self.actor_network(x)
+        value = self.critic_network(x).squeeze(-1)
         probs = Categorical(logits=logits)
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
+        return action, probs.log_prob(action), probs.entropy(), value
 
 
 if __name__ == "__main__":
@@ -232,11 +228,11 @@ if __name__ == "__main__":
 
     # env setup
     envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
+        [make_env(i, args.map_name) for i in range(args.num_envs)],
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
-
-    agent = Agent(envs).to(device)
+    
+    agent = Agent(envs, actor_weights_path=f"/workspace/Competition_OvercookedAI-2/results0104/{args.map_name}/mp/1/oracle_8/models/actor.pth").to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
@@ -379,6 +375,9 @@ if __name__ == "__main__":
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+
+    actor_weights_path = f"{args.map_name}.pth"
+    torch.save(agent.actor_network.state_dict(), actor_weights_path)
 
     envs.close()
     writer.close()

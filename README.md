@@ -24,7 +24,12 @@ mkdir build && cd build && cmake -D CUDAToolkit_ROOT=/usr/local/cuda .. && make 
 
 cd .. && pip install -e .
 ```
-针对single agent RL，我们跑cleanRL训练，需要构建`python=3.8`的环境
+如果后续运行ZSC出现`invalid argument`，记得注释掉`external/madrona/src/mw/cuda_exec.cpp`中245-255行的如下内容然后重新编译。
+```cpp
+REQ_CUDA(cudaDeviceSetLimit(cudaLimitMallocHeapSize,
+                                4ul*1024ul*1024ul*1024ul));
+```
+接下来，针对single agent RL，我们跑cleanRL训练，需要构建`python=3.8`的环境
 ```sh
 conda create -n cleanrl python=3.8 && conda activate cleanrl && pip install -r requirements.txt
 ```
@@ -46,10 +51,14 @@ python train_and_evaluate.py
 ```sh
 cd scripts
 
-# 方法1
+# 方法1：纯self play
 ./train_sp.sh
 
-# 方法2 (当前主要尝试方法, CoMeDi, Stanford 2023，依次运行两个脚本) 
+# 方法2：纯cross play
+./train_xp.sh
+./cbr_xp.sh
+
+# 方法3：mixed play (当前主要尝试方法, CoMeDi, Stanford 2023，依次运行两个脚本) 
 ./train_mp.sh
 ./cbr_mp.sh
 ```
@@ -57,6 +66,10 @@ cd scripts
 首先载入环境
 ```sh
 conda activate cleanrl
+```
+在ZSC训练好的模型基础上做fine-tune
+```sh
+cd scripts && ./srl_mp.sh
 ```
 
 
