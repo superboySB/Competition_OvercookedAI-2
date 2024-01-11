@@ -82,6 +82,10 @@ for i,layout_name in enumerate(game_pool):
     # 更新state_dict中的键
     new_state_dict = {key_map.get(k, k): v for k, v in policy_actor_state_dict.items()}
     policy_i.load_state_dict(new_state_dict)
+
+     # 启用评估模式
+    policy_i.eval()
+
     policy_pool.append(policy_i)
 
 

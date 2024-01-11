@@ -9,8 +9,10 @@ from overcooked_ai_py.mdp.actions import Action
 from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld, OvercookedState
 from overcooked_ai_py.mdp.overcooked_env import OvercookedEnv, DEFAULT_ENV_PARAMS
 
+from ray.rllib.env.env_context import EnvContext
+
 class SinglecookedAI(gym.Env):
-    def __init__(self, config):
+    def __init__(self, config: EnvContext):
         self.n_player = 2
         self.map_name = config["map_name"]
         self.horizon = 400
@@ -23,7 +25,7 @@ class SinglecookedAI(gym.Env):
         self.env = OvercookedEnv.from_mdp(self.base_mdp, **DEFAULT_ENV_PARAMS)
         dummy_state = self.base_mdp.get_standard_start_state()
         obs = self.base_mdp.lossless_state_encoding(dummy_state)[0]
-        self.observation_space = Box(0.0, 1.0, shape=obs.shape, dtype=np.int64)
+        self.observation_space = Box(low=-100.0, high=100.0, shape=obs.shape, dtype=np.float32)
         self.action_space = Discrete(len(Action.ALL_ACTIONS))
 
         self.reset()
@@ -32,7 +34,7 @@ class SinglecookedAI(gym.Env):
     def reset(self,
         *,
         seed: Optional[int] = None,
-        options: Optional[dict] = None,):
+        options: Optional[dict] = None):
         np.random.seed(seed)
         random.seed(seed)
 
@@ -43,7 +45,7 @@ class SinglecookedAI(gym.Env):
         self.player2agent_mapping = self.agent_mapping[self.rl_agent_index]
         self.env.reset()
         obs = self.base_mdp.lossless_state_encoding(self.env.state)[self.rl_agent_index]
-        return obs, {}
+        return obs.astype(np.float32), {}
 
     def step(self, action):
         joint_action = []
@@ -61,7 +63,7 @@ class SinglecookedAI(gym.Env):
         obs = self.base_mdp.lossless_state_encoding(next_state)[self.rl_agent_index]
 
         done = truncated = map_done
-        return obs, reward, done, truncated, info_before
+        return obs.astype(np.float32), reward, done, truncated, info_before
 
     def step_before_info(self, env_action):
         info = {
