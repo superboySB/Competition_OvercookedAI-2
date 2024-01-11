@@ -66,15 +66,11 @@ cd scripts
 ```
 
 #### 单智能体RL的微调
-在ZSC训练好的模型基础上做fine-tune
+目前怀疑ZSC策略只能跟比较好好玩的智能体协作，并一定程度解决尬住问题，但和random智能体协作表现非常差，所以准备在ZSC训练好的模型基础上做fine-tune，做一个额外的单智能体强化学习。
 ```sh
 cd scripts && ./srl_mp.sh
 ```
 
-
-### 目前计划 0103
-1. 已经从convention角度接入了翰澄推荐的[同组最新论文](http://iliad.stanford.edu/Diverse-Conventions/)，但还是要仔细去看魔改的[overcooked源码的MDP部分](https://github.com/Stanford-ILIAD/Diverse-Conventions/blob/master/src/overcooked2_env/sim.cpp)是否还是同一个环境，因为目前出现了本地测试越来越高，但在线匹配效果不佳的问题。
-2. 目前考虑完整训练pipeline之后的用时应该会是一天左右了，应该仔细研究算法背后的逻辑原理，当然我觉得主要的问题应该还是在环境上，毕竟有队伍写的是决策树，但我们在没有基础的情况下，还是努力用zsc的AI模型解决问题，达到对前沿的有效尝试就好，just for fun
 
 ## 以下是比赛官方介绍
 
@@ -174,6 +170,6 @@ be overwritten.
 
 
 ## Reference
-主要基于斯坦福开源的新玩具，可以给RL训练做GPU交互加速的研究型游戏引擎（[作者的博客](https://bsarkar321.github.io/blog/overcooked_madrona/index.html)），因为不像isaac系列那样核心代码闭源，所以最近也在讨论这边能不能拿来支持启元这里的AI全栈国产化，
+主要基于斯坦福开源的新玩具，可以给RL训练做GPU交互加速的研究型游戏引擎（[作者的博客](https://bsarkar321.github.io/blog/overcooked_madrona/index.html)），已经从convention角度接入了翰澄推荐的[同组最新论文](http://iliad.stanford.edu/Diverse-Conventions/)，也一样是这个团队的工作。因为不像isaac系列那样核心代码闭源，这个框架的后续迁移可以多考证。
 
 

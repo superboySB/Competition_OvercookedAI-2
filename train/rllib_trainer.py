@@ -30,7 +30,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-from env.singlecooked_gym import SinglecookedAI
+from env.singlecooked_gym import SinglecookedAI,TrainingCallbacks
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -52,13 +52,58 @@ parser.add_argument(
     "be achieved within --stop-timesteps AND --stop-iters.",
 )
 parser.add_argument(
-    "--stop-iters", type=int, default=3, help="Number of iterations to train."
+    "--stop-iters", type=int, default=1000, help="Number of iterations to train."
 )
 parser.add_argument(
     "--local-mode",
     action="store_true",
     help="Init Ray in local mode for easier debugging.",
 )
+parser.add_argument(
+    "--clip_param", type=float, default=0.1543,
+    help="PPO clipping factor"
+)
+parser.add_argument(
+    "--gamma", type=float, default=0.9777,
+    help="Discount factor"
+)
+parser.add_argument(
+    "--grad_clip", type=float, default=0.2884,
+    help="Gradient clipping value"
+)
+parser.add_argument(
+    "--kl_coeff", type=float, default=0.2408,
+    help="Initial coefficient for KL divergence"
+)
+parser.add_argument(
+    "--lmbda", type=float, default=0.6,
+    help="Lambda for GAE (Generalized Advantage Estimation)"
+)
+parser.add_argument(
+    "--lr", type=float, default=2.69e-4,
+    help="Learning rate"
+)
+parser.add_argument(
+    "--num_training_iters", type=int, default=500,
+    help="Number of training iterations"
+)
+parser.add_argument(
+    "--reward_shaping_horizon", type=int, default=4500000,
+    help="Reward shaping horizon"
+)
+parser.add_argument(
+    "--use_phi", type=bool, default=False,
+    help="Whether to use phi for dense reward"
+)
+parser.add_argument(
+    "--vf_loss_coeff", type=float, default=0.0069,
+    help="Value function loss coefficient"
+)
+parser.add_argument(
+    "--seed", type=int, default=0,
+    help="This will set the seed for the random number generator used by Ray, which can be important for reproducibility."
+)
+
 
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
@@ -169,32 +214,51 @@ if __name__ == "__main__":
         get_trainable_cls(args.run)
         .get_default_config()
         # or "corridor" if registered above
-        .environment(SinglecookedAI, env_config={"map_name": args.map_name})
+        .environment(SinglecookedAI, 
+                     env_config={"map_name": args.map_name, 
+                                 "use_phi":args.use_phi,
+                                 "reward_shaping_horizon":args.reward_shaping_horizon}
+        )
         .framework(args.framework)
-        .rollouts(num_rollout_workers=32)
+        .rollouts(num_rollout_workers=30,rollout_fragment_length = 400)
         # Use GPUs iff `RLLIB_NUM_GPUS` env var set to > 0.
         .resources(num_gpus=int(os.environ.get("RLLIB_NUM_GPUS", "1")))
         .training(
+            clip_param = args.clip_param,
+            gamma = args.gamma,
+            grad_clip = args.grad_clip, 
+            kl_coeff = args.kl_coeff,
+            lambda_ = args.lmbda,
+            lr = args.lr,
+            vf_loss_coeff = args.vf_loss_coeff,
+            train_batch_size = 12000,
+            sgd_minibatch_size = 2000,
+            num_sgd_iter = 8,
+            entropy_coeff_schedule = [
+                (0, 0.2),
+                (3e5, 0.1),
+            ],
             model={
                 "custom_model": "custom_actor_critic_model"
             }
         )
+        .callbacks(TrainingCallbacks)
+        .evaluation(evaluation_interval = 50)
     )
 
     # manual training with train loop using PPO and fixed learning rate
     print("Running manual train loop without Ray Tune.")
-    # use fixed learning rate instead of grid search (needs tune)
-    config.lr = 1e-3
+    config.seed=args.seed
     algo = config.build()
 
     # run manual training loop and print results after each iteration
-    for _ in range(args.stop_iters):
+    for _ in range(args.num_training_iters):
         result = algo.train()
         print(pretty_print(result))
     
      # 保存 Actor 网络的权重
     model = algo.get_policy().model
-    actor_weights_path = f"/workspace/Competition_OvercookedAI-2/{args.map_name}.pth"
+    actor_weights_path = f"/workspace/Competition_OvercookedAI-2/{args.map_name}_sd{args.seed}.pth"
     torch.save(model.actor_network.state_dict(), actor_weights_path)
     print(f"Actor model saved at: {actor_weights_path}")
     algo.stop()
