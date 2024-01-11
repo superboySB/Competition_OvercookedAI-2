@@ -177,7 +177,7 @@ if __name__ == "__main__":
     # parser.add_argument("--my_ai", default="random", help="random")
     # parser.add_argument("--opponent", default="random", help="random")
     parser.add_argument("--my_ai", default="finetune_0110")
-    parser.add_argument("--opponent", default="random")
+    parser.add_argument("--opponent", default="mp0108")
     args = parser.parse_args()
 
     # policy_list = ["random"] * len(game.agent_nums)

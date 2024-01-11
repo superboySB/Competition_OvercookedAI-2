@@ -77,7 +77,7 @@ for i,layout_name in enumerate(game_pool):
     channels = obs.shape[2]
     # channels = 20
     policy_i = Policy(width,height,channels)
-    actor_net = os.path.dirname(os.path.abspath(__file__)) + f"/{layout_name}.pth"
+    actor_net = os.path.dirname(os.path.abspath(__file__)) + f"/{layout_name}_sd0.pth"
     policy_actor_state_dict = torch.load(str(actor_net), map_location=torch.device('cpu'))
     # 更新state_dict中的键
     new_state_dict = {key_map.get(k, k): v for k, v in policy_actor_state_dict.items()}

@@ -17,7 +17,7 @@ do
             --kl_coeff 0.2408 \
             --lmbda 0.6 \
             --lr 2.69e-4 \
-            --num_training_iters 500 \
+            --num_training_iters 1000 \
             --reward_shaping_horizon 4500000 \
             --use_phi False \
             --vf_loss_coeff 0.0069 \
