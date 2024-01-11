@@ -6,7 +6,7 @@ This repo provide the source code of a solution for the [RLChina Competition - G
 
 
 ## Our Solution
-
+先用ZSC的最新方法训练两天，得到各个场景分别的best response相应模型，然后在random agent的协作博弈场景（此时更像单智能体问题）做fine tune
 ### 安装教程
 
 ```sh
