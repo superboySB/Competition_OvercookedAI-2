@@ -29,15 +29,17 @@ cd .. && pip install -e .
 REQ_CUDA(cudaDeviceSetLimit(cudaLimitMallocHeapSize,
                                 4ul*1024ul*1024ul*1024ul));
 ```
-接下来，针对single agent RL，我们跑cleanRL训练，需要构建`python=3.8`的环境
+接下来，针对single agent RL，我们跑rllib训练，需要额外安装rllib即可:
 ```sh
-conda create -n cleanrl python=3.8 && conda activate cleanrl && pip install -r requirements.txt
+pip install ray[rllib]==2.9.0
 ```
+
 ### 基本使用方法
 这是比赛submission的本地运行验证文件,可以输入两个模型，随时用来模拟比赛的对打情况
 ```sh
 python run_log.py
 ```
+
 #### ZSC
 首先载入环境
 ```sh
@@ -62,11 +64,8 @@ cd scripts
 ./train_mp.sh
 ./cbr_mp.sh
 ```
+
 #### 单智能体RL的微调
-首先载入环境
-```sh
-conda activate cleanrl
-```
 在ZSC训练好的模型基础上做fine-tune
 ```sh
 cd scripts && ./srl_mp.sh

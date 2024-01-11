@@ -52,13 +52,7 @@ parser.add_argument(
     "be achieved within --stop-timesteps AND --stop-iters.",
 )
 parser.add_argument(
-    "--stop-iters", type=int, default=50, help="Number of iterations to train."
-)
-parser.add_argument(
-    "--no-tune",
-    action="store_true",
-    help="Run without Tune using a manual train loop instead. In this case,"
-    "use PPO without grid search and no TensorBoard.",
+    "--stop-iters", type=int, default=3, help="Number of iterations to train."
 )
 parser.add_argument(
     "--local-mode",
@@ -200,7 +194,7 @@ if __name__ == "__main__":
     
      # 保存 Actor 网络的权重
     model = algo.get_policy().model
-    actor_weights_path = os.path.join(os.getcwd(), "./actor_model.pth")
+    actor_weights_path = f"/workspace/Competition_OvercookedAI-2/{args.map_name}.pth"
     torch.save(model.actor_network.state_dict(), actor_weights_path)
     print(f"Actor model saved at: {actor_weights_path}")
     algo.stop()
