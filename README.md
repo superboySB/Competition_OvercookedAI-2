@@ -39,7 +39,10 @@ pip install ray[rllib]==2.9.0
 ```sh
 python run_log.py
 ```
-
+这里可以尝试处理比赛提交后提供的对局json信息
+```sh
+python procress_json.py
+```
 #### ZSC
 首先载入环境
 ```sh

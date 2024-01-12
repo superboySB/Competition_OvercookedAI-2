@@ -1,6 +1,7 @@
 # -*- coding:utf-8  -*-
 import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"  # TODO:取消注释即可运行在服务器上,注释掉即可在本机显示图形界面
+os.environ['SDL_AUDIODRIVER'] = 'pulseaudio'
 import time
 import json
 import numpy as np
@@ -177,7 +178,7 @@ if __name__ == "__main__":
     # parser.add_argument("--my_ai", default="random", help="random")
     # parser.add_argument("--opponent", default="random", help="random")
     parser.add_argument("--my_ai", default="finetune_0111")
-    parser.add_argument("--opponent", default="random")
+    parser.add_argument("--opponent", default="jidi_random")
     args = parser.parse_args()
 
     # policy_list = ["random"] * len(game.agent_nums)

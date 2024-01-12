@@ -14,7 +14,7 @@ setup(name='madronarlenvs',
           'numpy',
           'tqdm',
           'overcooked-ai==1.1.0',
-          'gym==0.23.1',
+          'gym==0.22.0',
           'tensorboard',
           'packaging',
           'scipy'
