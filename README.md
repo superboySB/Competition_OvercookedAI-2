@@ -29,22 +29,25 @@ cd .. && pip install -e .
 REQ_CUDA(cudaDeviceSetLimit(cudaLimitMallocHeapSize,
                                 4ul*1024ul*1024ul*1024ul));
 ```
-接下来，针对single agent RL，我们跑rllib训练，需要额外安装rllib即可:
+接下来，针对single agent RL，我们额外结合[比赛官方环境](https://github.com/jidiai/Competition_OvercookedAI-2/blob/master/requirements.txt)，建立新的conda，用来跑rllib训练+jidi环境验证:
 ```sh
-pip install ray[rllib]==2.9.0
+conda create -n jidi python=3.8 && conda activate jidi && pip install -r requirements_jidi.txt
 ```
 
 ### 基本使用方法
 这是比赛submission的本地运行验证文件,可以输入两个模型，随时用来模拟比赛的对打情况
 ```sh
+conda activate jidi
+
 python run_log.py
 ```
 这里可以尝试处理比赛提交后提供的对局json信息
 ```sh
 python procress_json.py
 ```
+
 #### ZSC
-首先载入环境
+首先载入环境（区别于rllib使用的环境）
 ```sh
 conda activate madrona
 ```
@@ -71,6 +74,8 @@ cd scripts
 #### 单智能体RL的微调
 目前怀疑ZSC策略只能跟比较好好玩的智能体协作，并一定程度解决尬住问题，但和random智能体协作表现非常差，所以准备在ZSC训练好的模型基础上做fine-tune，做一个额外的单智能体强化学习。
 ```sh
+conda activate jidi
+
 cd scripts && ./srl_mp.sh
 ```
 

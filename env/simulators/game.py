@@ -45,4 +45,3 @@ class Game(ABC):
 
     def set_action_space(self):
         raise NotImplementedError
-

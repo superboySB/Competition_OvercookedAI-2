@@ -119,7 +119,6 @@ def run_game(g, env_name, multi_part_agent_ids, actions_spaces, policy_list, ren
                  "mode": "terminal",
                  "seed": g.seed if hasattr(g, "seed") else None,
                  "map_size": g.map_size if hasattr(g, "map_size") else None}
-    print(game_info)
 
     steps = []
     all_observes = g.all_observes
@@ -132,12 +131,12 @@ def run_game(g, env_name, multi_part_agent_ids, actions_spaces, policy_list, ren
         if render_mode and hasattr(g, "env_core"):
             if hasattr(g.env_core, "render"):
                 g.env_core.render()
-        elif render_mode and hasattr(g, 'render'):  # True
+        elif render_mode and hasattr(g, 'render'):
             g.render()
 
         info_dict = {"time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}
         joint_act = get_joint_action_eval(g, multi_part_agent_ids, policy_list, actions_spaces, all_observes)
-        all_observes, reward, _, info_before, info_after = g.step(joint_act)
+        all_observes, reward, done, info_before, info_after = g.step(joint_act)
 
 
         if env_name.split("-")[0] in ["magent"]:
@@ -175,14 +174,12 @@ if __name__ == "__main__":
     render_mode = True
 
     parser = argparse.ArgumentParser()
-    # parser.add_argument("--my_ai", default="random", help="random")
-    # parser.add_argument("--opponent", default="random", help="random")
-    parser.add_argument("--my_ai", default="finetune_0111")
-    parser.add_argument("--opponent", default="jidi_random")
+    parser.add_argument("--my_ai", default="random", help="random")
+    parser.add_argument("--opponent", default="finetune_0111", help="random")
     args = parser.parse_args()
 
     # policy_list = ["random"] * len(game.agent_nums)
-    policy_list = [args.opponent, args.my_ai] # ["random"] * len(game.agent_nums), here we control agent 2 (green agent)
+    policy_list = [args.opponent, args.my_ai] #["random"] * len(game.agent_nums), here we control agent 2 (green agent)
 
     multi_part_agent_ids, actions_space = get_players_and_action_space_list(game)
 

@@ -57,6 +57,3 @@ class CustomObservation(object):
         for i in player_id_list:
             all_obs_space.append(self.get_custom_obs_space(i))
         return all_obs_space
-
-
-
